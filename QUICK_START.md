@@ -37,7 +37,9 @@ That's it! All dependencies are now installed.
 
 ## Configuration
 
-### 3. Configure Drone Connection
+### 3. Configure Connection and API Keys
+
+**a) Set up drone connection:**
 
 Edit the `.env` file with your drone's connection details:
 ```bash
@@ -50,7 +52,9 @@ MAVLINK_ADDRESS=<your-drone-ip>
 MAVLINK_PORT=14540  # Or your drone's specific port
 ```
 
-### 4. Add API Key (Required for AI Agent)
+**Save and exit:** Press `Ctrl+X`, then `Y`, then `Enter`
+
+**b) Add your API key:**
 
 Create the secrets file:
 ```bash
@@ -75,13 +79,13 @@ anthropic:
 
 ## Usage
 
-### Test Connection
+### 4. Test Connection
 
 ```bash
 ./test_connection.sh
 ```
 
-### Start Flying
+### 5. Start Flying
 
 ```bash
 ./start_agent.sh
