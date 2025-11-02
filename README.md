@@ -9,6 +9,36 @@ A Python-based Model Context Protocol (MCP) server for AI-powered drone control.
 - 🔧 **MCP Protocol**: Standard Model Context Protocol for tool integration
 - 📡 **Network/Serial Support**: Connect via UDP, TCP, or serial ports
 - 🛡️ **Safe Configuration**: Secure handling of connection credentials
+- 💬 **ChatGPT Integration**: Direct control from ChatGPT web interface (see below)
+
+## 🌐 Control Your Drone with ChatGPT (NEW!)
+
+**Want to fly your drone by chatting with ChatGPT?** 
+
+You can now control your drone using natural language through the ChatGPT web interface!
+
+**Example conversation:**
+```
+You: "Arm the drone and take off to 15 meters"
+ChatGPT: "Arming... Armed! Taking off to 15 meters... 
+         Altitude: 5m... 10m... 15m. Hovering at 15 meters."
+
+You: "What's the battery level?"
+ChatGPT: "Battery is at 92%"
+
+You: "Perfect. Land the drone safely"
+ChatGPT: "Landing... 10m... 5m... 1m... Landed successfully!"
+```
+
+**Setup Steps:**
+1. Enable **Developer Mode** in ChatGPT settings (ChatGPT Plus/Pro required)
+2. Start the HTTP MCP server: `./start_http_server.sh`
+3. Add the MCP connector in ChatGPT with your server URL
+4. Start flying with natural language!
+
+📖 **[Complete ChatGPT Setup Guide →](CHATGPT_SETUP.md)**
+
+---
 
 ## Prerequisites
 
@@ -214,6 +244,7 @@ Start agent with auto-configuration:
 
 ## Documentation
 
+- **[ChatGPT Setup Guide](CHATGPT_SETUP.md)** - Control drone with ChatGPT web interface
 - **[Examples README](examples/README.md)** - Example agent documentation
 - **[Project Status](STATUS.md)** - Current functionality and roadmap
 - **[MCP Protocol](https://modelcontextprotocol.io/)** - Model Context Protocol docs

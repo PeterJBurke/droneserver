@@ -802,6 +802,7 @@ dependencies = [
     { name = "mavsdk" },
     { name = "mcp-agent" },
     { name = "mcp-server" },
+    { name = "python-dotenv" },
 ]
 
 [package.metadata]
@@ -809,6 +810,7 @@ requires-dist = [
     { name = "mavsdk", specifier = ">=2.0.0" },
     { name = "mcp-agent", specifier = ">=0.1.0" },
     { name = "mcp-server", specifier = ">=0.1.0" },
+    { name = "python-dotenv", specifier = ">=1.0.0" },
 ]
 
 [package.metadata.requires-dev]
