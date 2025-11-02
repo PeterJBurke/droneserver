@@ -4,7 +4,11 @@ Agent which demonstrates Human Input tool
 
 import asyncio
 
-from mcp_agent.core.fastagent import FastAgent
+try:
+    from mcp_agent.core.fastagent import FastAgent
+except ImportError:
+    # Try alternate import path for newer versions
+    from mcp_agent import FastAgent
 
 # Create the application
 fast = FastAgent("Human Input")

@@ -323,7 +323,21 @@ If you see this error when running the agent:
 ModuleNotFoundError: No module named 'mcp_agent.core.fastagent'
 ```
 
-**Solution:**
+**Solution 1 - Get the latest code with the fix:**
+```bash
+cd MAVLinkMCP
+
+# Pull the latest code with updated imports
+git pull origin main
+
+# Reinstall dependencies
+uv sync
+
+# Try again
+uv run examples/example_agent.py
+```
+
+**Solution 2 - If you still have issues:**
 ```bash
 cd MAVLinkMCP
 
