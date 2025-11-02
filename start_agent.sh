@@ -37,20 +37,20 @@ else
 fi
 
 echo ""
-echo "🚀 Starting MAVLink MCP Agent..."
+echo "🚀 Starting MAVLink MCP Server..."
 echo "================================"
 echo ""
-echo "Once connected, you can use commands like:"
-echo "  - 'Arm the drone'"
-echo "  - 'Take off to 5 meters'"
-echo "  - 'What is the current position?'"
-echo "  - 'Land the drone'"
+echo "The server will expose these drone control tools:"
+echo "  - arm_drone()"
+echo "  - takeoff(altitude)"
+echo "  - get_position()"
+echo "  - move_to_relative(lr, fb, altitude, yaw)"
+echo "  - land()"
+echo "  - get_flight_mode()"
 echo ""
-echo "Type 'STOP' to exit the agent."
-echo ""
-echo "Press Ctrl+C to abort startup..."
+echo "Press Ctrl+C to stop the server..."
 sleep 2
 
-# Run the agent with uv
-uv run examples/example_agent.py
+# Run the MCP server with uv
+uv run src/server/mavlinkmcp.py
 

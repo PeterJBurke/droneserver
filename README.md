@@ -117,40 +117,52 @@ anthropic:
 
 **Save and exit:** Press `Ctrl+X`, then `Y`, then `Enter`
 
-### 4. Run the AI Agent
+### 4. Test the Setup
 
 ```bash
+# Test the example (shows available commands)
 uv run examples/example_agent.py
-```
 
-**Note:** The agent automatically starts the MCP server - no need to run it separately!
-
-Then use natural language commands:
-- "Arm the drone"
-- "Take off to 5 meters"
-- "What is the current position?"
-- "Land the drone"
-
-## Usage
-
-### Method 1: AI Agent (Recommended)
-
-The AI agent provides natural language control. The agent **automatically starts the MCP server** as a subprocess - you don't need to run the server separately.
-
-```bash
-# Configure API keys in examples/fastagent.secrets.yaml
-uv run examples/example_agent.py
-```
-
-### Method 2: Direct MCP Server (Advanced)
-
-For integration with other MCP clients or custom applications. Only use this if you're **not** using the AI agent:
-
-```bash
+# Or run the MCP server directly for testing
 uv run src/server/mavlinkmcp.py
 ```
 
-**Note:** This runs the server standalone. The AI agent (Method 1) starts this automatically.
+**Note:** The MCP server connects to your drone and exposes control tools. You can integrate it with AI agents or call the tools programmatically.
+
+**Available drone control functions:**
+- `arm_drone()` - Arm the motors
+- `takeoff(altitude)` - Take off to specified altitude
+- `get_position()` - Get GPS position
+- `move_to_relative(lr, fb, altitude, yaw)` - Move relative to current position  
+- `land()` - Land the drone
+- `get_flight_mode()` - Get current flight mode
+
+## Usage
+
+### Running the MCP Server
+
+The MAVLink MCP server exposes drone control as MCP tools that can be used by AI agents or other MCP clients:
+
+```bash
+# Run the MCP server (connects to your drone via .env settings)
+uv run src/server/mavlinkmcp.py
+```
+
+The server will:
+1. Load drone connection settings from `.env`
+2. Connect to your drone at the specified IP and port
+3. Wait for GPS lock
+4. Expose drone control tools via the MCP protocol
+
+### Integrating with AI Agents
+
+The MCP server can be integrated with various AI frameworks:
+
+- **MCP-compatible AI agents** - Connect any MCP client to the server
+- **Custom Python clients** - Use the `mcp-agent` package to build custom integrations
+- **LLM applications** - Expose drone control as tools/functions to LLMs
+
+**Note:** The `mcp-agent` package API has changed significantly. We're working on updated examples for the new API. For now, you can run the server directly and integrate it with your preferred MCP client.
 
 ### Quick Launch Scripts
 
