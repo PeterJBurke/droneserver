@@ -125,25 +125,55 @@ anthropic:
 
 **Save and exit:** Press `Ctrl+X`, then `Y`, then `Enter`
 
-### 4. Test the Setup
+### 4. Control Your Drone
+
+**Choose your control method:**
+
+#### **Option A: Interactive CLI (Easiest - Direct Control)**
+
+Use the interactive command-line controller for direct, human-friendly control:
 
 ```bash
-# Test the example (shows available commands)
-uv run examples/example_agent.py
+uv run examples/interactive_client.py
+```
 
-# Or run the MCP server directly for testing
+**Example commands:**
+```
+Command> arm              # Arm the drone
+Command> takeoff 10       # Take off to 10 meters
+Command> position         # Get GPS position
+Command> battery          # Check battery
+Command> land             # Land the drone
+Command> help             # Show all commands
+```
+
+**Available commands:**
+- `connect` - Connect to drone
+- `arm` / `disarm` - Arm/disarm motors
+- `takeoff [altitude]` - Take off (default: 10m)
+- `land` - Land the drone
+- `position` - Get GPS coordinates
+- `battery` - Check battery level
+- `mode` - Get flight mode
+- `help` - Show all commands
+- `quit` / `exit` - Exit
+
+---
+
+#### **Option B: MCP Server (For AI Agents)**
+
+If you want to control your drone through AI (Claude Desktop, etc.), run the MCP server:
+
+```bash
 uv run src/server/mavlinkmcp.py
 ```
 
-**Note:** The MCP server connects to your drone and exposes control tools. You can integrate it with AI agents or call the tools programmatically.
+**⚠️ Important:** The MCP server uses JSON-RPC protocol. Don't type commands into it directly. Instead:
+1. Run it in the background or separate terminal
+2. Connect to it with Claude Desktop or another MCP-compatible client
+3. Chat naturally with the AI to control your drone
 
-**Available drone control functions:**
-- `arm_drone()` - Arm the motors
-- `takeoff(altitude)` - Take off to specified altitude
-- `get_position()` - Get GPS position
-- `move_to_relative(lr, fb, altitude, yaw)` - Move relative to current position  
-- `land()` - Land the drone
-- `get_flight_mode()` - Get current flight mode
+See [DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md) for MCP server integration details
 
 ## Usage
 
