@@ -240,6 +240,74 @@ MIT License - see [LICENSE](LICENSE) file for details.
 - Built with [MAVSDK](https://mavsdk.mavlink.io/)
 - Uses [Model Context Protocol](https://modelcontextprotocol.io/)
 
+## Getting API Keys
+
+### OpenAI API Key (for GPT-4o-mini, GPT-4o, etc.)
+
+1. **Create an OpenAI account:**
+   - Go to [https://platform.openai.com/signup](https://platform.openai.com/signup)
+   - Sign up with your email or Google/Microsoft account
+
+2. **Add billing information:**
+   - Navigate to [https://platform.openai.com/account/billing](https://platform.openai.com/account/billing)
+   - Add a payment method (required for API access)
+   - Consider setting usage limits to control costs
+
+3. **Create an API key:**
+   - Go to [https://platform.openai.com/api-keys](https://platform.openai.com/api-keys)
+   - Click **"Create new secret key"**
+   - Give it a name (e.g., "MAVLink MCP")
+   - **Copy the key immediately** - you won't be able to see it again!
+   - Key format: `sk-proj-...` or `sk-...`
+
+4. **Add to your project:**
+   ```bash
+   nano examples/fastagent.secrets.yaml
+   ```
+   ```yaml
+   openai:
+       api_key: sk-proj-your-actual-key-here
+   ```
+
+**Pricing:** Pay-as-you-go. GPT-4o-mini costs ~$0.15 per 1M input tokens. Check current pricing at [https://openai.com/api/pricing/](https://openai.com/api/pricing/)
+
+### Anthropic API Key (for Claude)
+
+1. **Create an Anthropic account:**
+   - Go to [https://console.anthropic.com/](https://console.anthropic.com/)
+   - Sign up with your email
+
+2. **Add billing:**
+   - Navigate to **Settings → Billing**
+   - Add a payment method
+   - Purchase credits (minimum $5)
+
+3. **Create an API key:**
+   - Go to **Settings → API Keys**
+   - Click **"Create Key"**
+   - Give it a name (e.g., "MAVLink MCP")
+   - **Copy the key immediately** - you won't be able to see it again!
+   - Key format: `sk-ant-...`
+
+4. **Add to your project:**
+   ```bash
+   nano examples/fastagent.secrets.yaml
+   ```
+   ```yaml
+   anthropic:
+       api_key: sk-ant-your-actual-key-here
+   ```
+
+**Pricing:** Prepaid credits. Claude 3.5 Sonnet costs ~$3 per 1M input tokens. Check current pricing at [https://www.anthropic.com/pricing](https://www.anthropic.com/pricing)
+
+### Security Notes
+
+- **Never commit API keys to Git** - the `.gitignore` is configured to protect `fastagent.secrets.yaml`
+- **Keep keys private** - treat them like passwords
+- **Set spending limits** - both platforms allow budget controls
+- **Rotate keys regularly** - especially if you suspect they've been exposed
+- **Use separate keys** - for development vs production
+
 ## Support
 
 - 📖 [Full Deployment Guide](DEPLOYMENT_GUIDE.md)
