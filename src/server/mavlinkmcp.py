@@ -27,32 +27,68 @@ class MAVLinkConnector:
 @asynccontextmanager
 async def app_lifespan(server: FastMCP) -> AsyncIterator[MAVLinkConnector]:
     """Manage application lifecycle with type-safe context"""
-    # Initialize on startup
+    # Initialize on startup - load from .env file
+    logger.info("=" * 60)
+    logger.info("MAVLink MCP Server Starting")
+    logger.info("=" * 60)
+    
+    # Read connection settings from environment (.env file)
     address = os.environ.get("MAVLINK_ADDRESS", "")
     port = os.environ.get("MAVLINK_PORT", "14540")
+    
+    # Display connection configuration
+    logger.info("Configuration loaded from .env file:")
+    logger.info("  MAVLINK_ADDRESS: %s", address if address else "(not set - using default)")
+    logger.info("  MAVLINK_PORT: %s", port)
+    logger.info("=" * 60)
+    
+    if not address:
+        logger.warning("WARNING: MAVLINK_ADDRESS not set in .env file!")
+        logger.warning("Please configure .env with your drone's IP address")
+        raise ValueError("MAVLINK_ADDRESS not configured in .env file")
+    
     drone = System()
-    logger.info("Connecting to drone at %s:%s", address, port)
-    await drone.connect(system_address=f"udp://{address}:{port}")
+    connection_string = f"udp://{address}:{port}"
+    logger.info("Attempting connection to drone...")
+    logger.info("  Protocol: UDP")
+    logger.info("  Target: %s:%s", address, port)
+    logger.info("  Connection string: %s", connection_string)
+    logger.info("-" * 60)
+    
+    await drone.connect(system_address=connection_string)
 
-    logger.info("Waiting for drone to connect at %s:%s", address, port)
+    logger.info("Waiting for drone to respond at %s:%s...", address, port)
     async for state in drone.core.connection_state():
         if state.is_connected:
-            logger.info("Connected to drone at %s:%s!", address, port)
+            logger.info("=" * 60)
+            logger.info("✓ SUCCESS: Connected to drone at %s:%s!", address, port)
+            logger.info("=" * 60)
             break
 
-    logger.info("Waiting for drone to have a global position estimate...")
-    logger.info(f"{drone.telemetry.health()}")
+    logger.info("Waiting for drone to acquire GPS lock...")
+    logger.info("(This may take 1-2 minutes if drone just powered on)")
     async for health in drone.telemetry.health():
         if health.is_global_position_ok or health.is_home_position_ok:
-            logger.info(f"Global position {health.is_global_position_ok}, home position {health.is_home_position_ok}")
+            logger.info("=" * 60)
+            logger.info("✓ GPS LOCK ACQUIRED")
+            logger.info("  Global position: %s", "OK" if health.is_global_position_ok else "Not ready")
+            logger.info("  Home position: %s", "OK" if health.is_home_position_ok else "Not ready")
+            logger.info("=" * 60)
+            logger.info("MCP Server is READY and exposing drone control tools")
+            logger.info("Press Ctrl+C to stop the server")
+            logger.info("=" * 60)
             break
 
     try:
         yield MAVLinkConnector(drone=drone)
     finally:
         # Cleanup on shutdown
-        logger.info("Disconnecting drone")
+        logger.info("=" * 60)
+        logger.info("Shutting down MCP server...")
+        logger.info("Disconnecting from drone at %s:%s", address, port)
         await drone.close()
+        logger.info("Server stopped")
+        logger.info("=" * 60)
 
 # Pass lifespan to server
 mcp = FastMCP("MAVLink MCP", lifespan=app_lifespan)
