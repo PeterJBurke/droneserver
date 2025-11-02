@@ -120,7 +120,8 @@ async def app_lifespan(server: FastMCP) -> AsyncIterator[MAVLinkConnector]:
                 pass
         
         logger.info("Disconnecting from drone at %s:%s", address, port)
-        await drone.close()
+        # Note: MAVSDK System doesn't have a close() method
+        # The connection will be cleaned up when the object is destroyed
         logger.info("Server stopped")
         logger.info("=" * 60)
 
