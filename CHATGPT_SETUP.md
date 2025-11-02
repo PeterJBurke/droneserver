@@ -182,109 +182,6 @@ https://abc123xyz.ngrok-free.app/sse
 
 ---
 
-### Using tmux/screen for Persistent Sessions (Recommended)
-
-To keep both running even if you disconnect from SSH:
-
-**Using tmux:**
-```bash
-# Install tmux
-sudo apt install tmux
-
-# Start tmux session
-tmux new -s drone
-
-# Terminal 1: Start MCP server
-cd ~/MAVLinkMCP
-./start_http_server.sh
-
-# Press Ctrl+B then C (create new window)
-
-# Terminal 2: Start ngrok
-ngrok http 8080
-
-# Detach from tmux: Press Ctrl+B then D
-# Reattach later: tmux attach -t drone
-```
-
-**Using screen:**
-```bash
-# Install screen
-sudo apt install screen
-
-# Start screen session
-screen -S drone
-
-# Terminal 1: Start MCP server
-cd ~/MAVLinkMCP
-./start_http_server.sh
-
-# Press Ctrl+A then C (create new window)
-
-# Terminal 2: Start ngrok
-ngrok http 8080
-
-# Detach from screen: Press Ctrl+A then D
-# Reattach later: screen -r drone
-```
-
----
-
-### Quick Start Script (Both MCP + ngrok)
-
-Create a helper script:
-
-```bash
-nano ~/start_drone_chatgpt.sh
-```
-
-Add:
-```bash
-#!/bin/bash
-
-echo "Starting MAVLink MCP Server for ChatGPT..."
-echo ""
-
-# Check if tmux is installed
-if ! command -v tmux &> /dev/null; then
-    echo "Installing tmux..."
-    sudo apt install -y tmux
-fi
-
-# Start tmux session with MCP server and ngrok
-tmux new-session -d -s drone "cd ~/MAVLinkMCP && ./start_http_server.sh"
-tmux split-window -h -t drone "sleep 5 && ngrok http 8080"
-
-echo "✅ Started!"
-echo ""
-echo "To view the ngrok URL:"
-echo "  tmux attach -t drone"
-echo ""
-echo "To detach (keep running):"
-echo "  Press Ctrl+B then D"
-echo ""
-echo "To stop everything:"
-echo "  tmux kill-session -t drone"
-```
-
-Make executable:
-```bash
-chmod +x ~/start_drone_chatgpt.sh
-```
-
-**Usage:**
-```bash
-# Start both MCP server and ngrok
-~/start_drone_chatgpt.sh
-
-# Attach to see the ngrok URL
-tmux attach -t drone
-
-# Copy the https:// URL, then detach (Ctrl+B, then D)
-```
-
----
-
 ### ngrok Free Tier Notes
 
 ✅ **Included:**
@@ -426,7 +323,7 @@ If you see **"Connection Error"**, check:
 
 **You:** "What flight mode is the drone in?"
 
-**ChatGPT:** "The drone is currently in OFFBOARD mode, which allows programmatic control."
+**ChatGPT:** "The drone is currently in GUIDED mode (ArduPilot's external control mode), which allows programmatic control."
 
 ---
 
