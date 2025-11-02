@@ -30,6 +30,36 @@ class MAVLinkConnector:
     drone: System
     last_offboard_position: PositionNedYaw = field(default_factory=lambda: PositionNedYaw(0.0, 0.0, 0.0, 0.0))
 
+async def connect_drone_background(drone: System, address: str, port: str, protocol: str):
+    """Connect to drone in the background without blocking server startup"""
+    connection_string = f"{protocol}://{address}:{port}"
+    logger.info("Background: Connecting to drone...")
+    logger.info("  Protocol: %s", protocol.upper())
+    logger.info("  Target: %s:%s", address, port)
+    
+    await drone.connect(system_address=connection_string)
+
+    logger.info("Background: Waiting for drone to respond...")
+    async for state in drone.core.connection_state():
+        if state.is_connected:
+            logger.info("=" * 60)
+            logger.info("✓ SUCCESS: Connected to drone at %s:%s!", address, port)
+            logger.info("=" * 60)
+            break
+
+    logger.info("Background: Waiting for GPS lock...")
+    async for health in drone.telemetry.health():
+        if health.is_global_position_ok or health.is_home_position_ok:
+            logger.info("=" * 60)
+            logger.info("✓ GPS LOCK ACQUIRED")
+            logger.info("  Global position: %s", "OK" if health.is_global_position_ok else "Not ready")
+            logger.info("  Home position: %s", "OK" if health.is_home_position_ok else "Not ready")
+            logger.info("=" * 60)
+            logger.info("Drone is READY for commands")
+            logger.info("=" * 60)
+            break
+
+
 @asynccontextmanager
 async def app_lifespan(server: FastMCP) -> AsyncIterator[MAVLinkConnector]:
     """Manage application lifecycle with type-safe context"""
@@ -61,36 +91,17 @@ async def app_lifespan(server: FastMCP) -> AsyncIterator[MAVLinkConnector]:
         protocol = "udp"
     
     drone = System()
-    connection_string = f"{protocol}://{address}:{port}"
-    logger.info("Attempting connection to drone...")
-    logger.info("  Protocol: %s", protocol.upper())
-    logger.info("  Target: %s:%s", address, port)
-    logger.info("  Connection string: %s", connection_string)
+    
+    # Start drone connection in background - don't wait for it!
+    logger.info("Starting drone connection in background...")
+    logger.info("MCP Server will be ready immediately")
+    logger.info("Drone connection will complete asynchronously")
     logger.info("-" * 60)
     
-    await drone.connect(system_address=connection_string)
-
-    logger.info("Waiting for drone to respond at %s:%s...", address, port)
-    async for state in drone.core.connection_state():
-        if state.is_connected:
-            logger.info("=" * 60)
-            logger.info("✓ SUCCESS: Connected to drone at %s:%s!", address, port)
-            logger.info("=" * 60)
-            break
-
-    logger.info("Waiting for drone to acquire GPS lock...")
-    logger.info("(This may take 1-2 minutes if drone just powered on)")
-    async for health in drone.telemetry.health():
-        if health.is_global_position_ok or health.is_home_position_ok:
-            logger.info("=" * 60)
-            logger.info("✓ GPS LOCK ACQUIRED")
-            logger.info("  Global position: %s", "OK" if health.is_global_position_ok else "Not ready")
-            logger.info("  Home position: %s", "OK" if health.is_home_position_ok else "Not ready")
-            logger.info("=" * 60)
-            logger.info("MCP Server is READY and exposing drone control tools")
-            logger.info("Press Ctrl+C to stop the server")
-            logger.info("=" * 60)
-            break
+    # Create background task for drone connection
+    connection_task = asyncio.create_task(
+        connect_drone_background(drone, address, port, protocol)
+    )
 
     try:
         yield MAVLinkConnector(drone=drone)
@@ -98,6 +109,16 @@ async def app_lifespan(server: FastMCP) -> AsyncIterator[MAVLinkConnector]:
         # Cleanup on shutdown
         logger.info("=" * 60)
         logger.info("Shutting down MCP server...")
+        
+        # Cancel connection task if still running
+        if not connection_task.done():
+            logger.info("Cancelling drone connection task...")
+            connection_task.cancel()
+            try:
+                await connection_task
+            except asyncio.CancelledError:
+                pass
+        
         logger.info("Disconnecting from drone at %s:%s", address, port)
         await drone.close()
         logger.info("Server stopped")
