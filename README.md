@@ -260,6 +260,9 @@ The MCP server exposes these tools for drone control:
 | **Telemetry** | `get_position`, `get_flight_mode`, `get_imu`, `print_status_text` |
 | **Missions** | `initiate_mission`, `print_mission_progress` |
 
+### Recent Updates
+- ✅ **Nov 2, 2025**: Fixed `move_to_relative` to correctly move drone in horizontal directions (north/east). Previously only changed altitude.
+
 ## Configuration
 
 Create a `.env` file in the project root:

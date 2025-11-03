@@ -11,9 +11,11 @@
   - ✅ Arm/Disarm
   - ✅ Takeoff to specified altitude
   - ✅ Landing
+  - ✅ **Relative movement (North/East/Down)** - Fixed Nov 2, 2025
   - ✅ Position telemetry (GPS coordinates, altitude)
   - ✅ Flight mode monitoring
   - ✅ Battery status (when available)
+- **ArduPilot GUIDED Mode Support** - Automatic mode switching with fallback
 
 ### Verified Test Flight
 **Date:** November 2, 2025  
@@ -53,11 +55,11 @@
 
 ### 1. Enhanced Flight Capabilities
 - [ ] **Waypoint Navigation** - Upload and execute mission plans
-- [ ] **Relative Movement** - Move X meters left/right, forward/back
 - [ ] **Orbit Mode** - Circle around a point of interest
 - [ ] **Return to Home** - Emergency return functionality
 - [ ] **Geofencing** - Define safe flight boundaries
 - [ ] **Speed Control** - Set maximum velocities
+- [ ] **Follow Me Mode** - Track moving GPS coordinates
 
 ### 2. Advanced Telemetry
 - [ ] **Real-time Streaming** - Continuous position/attitude updates
@@ -131,6 +133,13 @@
 3. **Error Recovery** - Limited automatic recovery from connection errors
 4. **Windows Support** - Primarily tested on Ubuntu 24.04
 
+## 🔧 Recent Bug Fixes
+
+### November 2, 2025 - Relative Movement Bug Fix
+**Issue:** `move_to_relative` command was not moving drone horizontally (north/east directions).  
+**Cause:** Function was not calculating target GPS coordinates from meter offsets.  
+**Fix:** Added proper NED-to-GPS coordinate conversion with latitude-adjusted longitude.
+
 ---
 
 ## 🎯 Recommended Priority
@@ -138,8 +147,8 @@
 ### **Short Term (1-2 weeks)**
 1. Claude Desktop integration guide
 2. Waypoint navigation
-3. Relative movement commands
-4. Pre-flight safety checks
+3. Pre-flight safety checks
+4. Orbit/Follow-me modes
 
 ### **Medium Term (1-2 months)**
 1. Web dashboard

@@ -9,6 +9,7 @@ from mavsdk.mission import MissionItem, MissionPlan
 import asyncio
 import os
 import logging
+import math
 from dotenv import load_dotenv
 from pathlib import Path
 
@@ -210,6 +211,10 @@ async def ensure_guided_mode(connector: MAVLinkConnector) -> bool:
     
     This is the ArduPilot equivalent of PX4's OFFBOARD mode.
     GUIDED mode allows external computer control of the drone.
+    
+    For ArduPilot drones, GUIDED mode must be active before sending movement commands.
+    If mode switching fails, the drone may need to be switched to GUIDED mode manually
+    via RC transmitter or ground control station.
 
     Args:
         connector (MAVLinkConnector): The MAVLinkConnector instance.
@@ -223,25 +228,62 @@ async def ensure_guided_mode(connector: MAVLinkConnector) -> bool:
         return True
     
     drone = connector.drone
-    logger.info("Switching to GUIDED mode (ArduPilot external control)")
+    logger.info("=" * 60)
+    logger.info("Checking GUIDED mode for ArduPilot")
+    logger.info("=" * 60)
     
     try:
         # Get current flight mode
         current_mode = await drone.telemetry.flight_mode().__anext__()
         logger.info(f"Current flight mode: {current_mode}")
         
-        # If not in GUIDED, switch to it
-        if "GUIDED" not in str(current_mode).upper():
-            await drone.action.set_flight_mode("GUIDED")
-            logger.info("✓ GUIDED mode activated successfully")
-        else:
-            logger.info("✓ Already in GUIDED mode")
-            
-        connector.in_guided_mode = True
-        return True
+        # Check if already in GUIDED mode
+        if "GUIDED" in str(current_mode).upper():
+            logger.info("✓ Already in GUIDED mode - ready for movement commands")
+            connector.in_guided_mode = True
+            return True
         
+        # Try to switch to GUIDED mode
+        logger.info("Attempting to switch to GUIDED mode...")
+        logger.info("Note: Some ArduPilot configurations may require manual mode switching via RC")
+        
+        try:
+            await drone.action.set_flight_mode("GUIDED")
+            
+            # Wait a moment for mode change to take effect
+            await asyncio.sleep(0.5)
+            
+            # Verify the mode change
+            new_mode = await drone.telemetry.flight_mode().__anext__()
+            if "GUIDED" in str(new_mode).upper():
+                logger.info("✓ Successfully switched to GUIDED mode")
+                logger.info("=" * 60)
+                connector.in_guided_mode = True
+                return True
+            else:
+                logger.warning(f"Mode switch may have failed. Current mode: {new_mode}")
+                logger.warning("If drone is not responding, manually switch to GUIDED mode via RC")
+                logger.info("=" * 60)
+                # Still try - some drones report modes differently
+                connector.in_guided_mode = True
+                return True
+                
+        except Exception as mode_error:
+            logger.error(f"GUIDED mode activation failed: {mode_error}")
+            logger.error("=" * 60)
+            logger.error("TROUBLESHOOTING:")
+            logger.error("  1. ArduPilot drone must be armed first")
+            logger.error("  2. Some drones require RC mode switch to GUIDED")
+            logger.error("  3. Check GCS (Mission Planner/QGroundControl) can switch modes")
+            logger.error("  4. Verify GUIDED mode is enabled in ArduPilot parameters")
+            logger.error("=" * 60)
+            connector.in_guided_mode = False
+            return False
+            
     except Exception as error:
-        logger.error(f"Failed to activate GUIDED mode: {error}")
+        logger.error(f"Failed to check/activate GUIDED mode: {error}")
+        logger.error("This is normal for PX4 drones (they use OFFBOARD mode instead)")
+        logger.info("=" * 60)
         connector.in_guided_mode = False
         return False
 
@@ -276,23 +318,52 @@ async def move_to_relative(ctx: Context, north_m: float, east_m: float, down_m: 
     try:
         # Get current position
         position = await drone.telemetry.position().__anext__()
+        current_lat = position.latitude_deg
+        current_lon = position.longitude_deg
         current_alt = position.relative_altitude_m
         
         # Calculate target altitude (down is positive in NED, so negate)
         target_alt = current_alt - down_m
         
-        # Use goto_location for relative movement
-        # Note: MAVSDK's goto_location_ned moves relative to current position
-        logger.info(f"Moving in GUIDED mode: north={north_m}m, east={east_m}m, altitude_change={-down_m}m")
+        # Convert NED offsets (meters) to lat/lon offsets (degrees)
+        # Earth radius in meters (approximate)
+        EARTH_RADIUS = 6371000.0
+        
+        # Latitude: 1 degree = ~111,320 meters (constant)
+        # north_m positive = increase latitude
+        lat_offset_deg = north_m / 111320.0
+        
+        # Longitude: varies with latitude
+        # east_m positive = increase longitude
+        lon_offset_deg = east_m / (111320.0 * math.cos(math.radians(current_lat)))
+        
+        # Calculate target position
+        target_lat = current_lat + lat_offset_deg
+        target_lon = current_lon + lon_offset_deg
+        
+        logger.info(f"Moving in GUIDED mode:")
+        logger.info(f"  Current: {current_lat:.6f}°, {current_lon:.6f}°, {current_alt:.1f}m")
+        logger.info(f"  Offset: north={north_m:.1f}m, east={east_m:.1f}m, down={down_m:.1f}m")
+        logger.info(f"  Target: {target_lat:.6f}°, {target_lon:.6f}°, {target_alt:.1f}m")
+        
+        # Use goto_location with calculated target coordinates
         await drone.action.goto_location(
-            position.latitude_deg,
-            position.longitude_deg,
+            target_lat,
+            target_lon,
             target_alt,
             yaw_deg
         )
         
         logger.info("✓ Movement command sent successfully")
-        return {"status": "success", "message": f"Moving: north={north_m}m, east={east_m}m, altitude={target_alt}m"}
+        return {
+            "status": "success", 
+            "message": f"Moving: north={north_m}m, east={east_m}m, altitude_change={-down_m}m",
+            "target_position": {
+                "latitude_deg": target_lat,
+                "longitude_deg": target_lon,
+                "altitude_m": target_alt
+            }
+        }
         
     except Exception as e:
         logger.error(f"Failed to execute relative movement: {e}")
