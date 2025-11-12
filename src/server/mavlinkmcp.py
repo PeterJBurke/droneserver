@@ -6,7 +6,6 @@ from mcp.server.fastmcp import Context, FastMCP
 from typing import Tuple
 from mavsdk import System
 from mavsdk.mission import MissionItem, MissionPlan
-from mavsdk.offboard import OffboardError, PositionNedYaw
 import asyncio
 import os
 import logging
@@ -204,97 +203,15 @@ async def get_position(ctx: Context) -> dict:
         logger.error(f"Failed to retrieve position: {e}")
         return {"status": "failed", "error": str(e)}
 
-<<<<<<< HEAD
-async def ensure_guided_mode(connector: MAVLinkConnector) -> bool:
-    """
-    Ensure the drone is in GUIDED mode (ArduPilot's external control mode).
-    
-    This is the ArduPilot equivalent of PX4's OFFBOARD mode.
-    GUIDED mode allows external computer control of the drone.
-    
-    For ArduPilot drones, GUIDED mode must be active before sending movement commands.
-    If mode switching fails, the drone may need to be switched to GUIDED mode manually
-    via RC transmitter or ground control station.
-
-    Args:
-        connector (MAVLinkConnector): The MAVLinkConnector instance.
-
-    Returns:
-        bool: True if GUIDED mode was activated successfully, False otherwise.
-    """
-    # If already in GUIDED mode, no need to switch
-    if connector.in_guided_mode:
-        logger.debug("Already in GUIDED mode")
-        return True
-    
-    drone = connector.drone
-    logger.info("=" * 60)
-    logger.info("Checking GUIDED mode for ArduPilot")
-    logger.info("=" * 60)
-    
-    try:
-        # Get current flight mode
-        current_mode = await drone.telemetry.flight_mode().__anext__()
-        logger.info(f"Current flight mode: {current_mode}")
-        
-        # Check if already in GUIDED mode
-        if "GUIDED" in str(current_mode).upper():
-            logger.info("✓ Already in GUIDED mode - ready for movement commands")
-            connector.in_guided_mode = True
-            return True
-        
-        # Try to switch to GUIDED mode
-        logger.info("Attempting to switch to GUIDED mode...")
-        logger.info("Note: Some ArduPilot configurations may require manual mode switching via RC")
-        
-        try:
-            await drone.action.set_flight_mode("GUIDED")
-            
-            # Wait a moment for mode change to take effect
-            await asyncio.sleep(0.5)
-            
-            # Verify the mode change
-            new_mode = await drone.telemetry.flight_mode().__anext__()
-            if "GUIDED" in str(new_mode).upper():
-                logger.info("✓ Successfully switched to GUIDED mode")
-                logger.info("=" * 60)
-                connector.in_guided_mode = True
-                return True
-            else:
-                logger.warning(f"Mode switch may have failed. Current mode: {new_mode}")
-                logger.warning("If drone is not responding, manually switch to GUIDED mode via RC")
-                logger.info("=" * 60)
-                # Still try - some drones report modes differently
-                connector.in_guided_mode = True
-                return True
-                
-        except Exception as mode_error:
-            logger.error(f"GUIDED mode activation failed: {mode_error}")
-            logger.error("=" * 60)
-            logger.error("TROUBLESHOOTING:")
-            logger.error("  1. ArduPilot drone must be armed first")
-            logger.error("  2. Some drones require RC mode switch to GUIDED")
-            logger.error("  3. Check GCS (Mission Planner/QGroundControl) can switch modes")
-            logger.error("  4. Verify GUIDED mode is enabled in ArduPilot parameters")
-            logger.error("=" * 60)
-            connector.in_guided_mode = False
-            return False
-            
-    except Exception as error:
-        logger.error(f"Failed to check/activate GUIDED mode: {error}")
-        logger.error("This is normal for PX4 drones (they use OFFBOARD mode instead)")
-        logger.info("=" * 60)
-        connector.in_guided_mode = False
-        return False
-
-=======
->>>>>>> 3854d4a (Fix CRITICAL: Restore MAVSDK offboard API for drone movement)
 @mcp.tool()
 async def move_to_relative(ctx: Context, north_m: float, east_m: float, down_m: float, yaw_deg: float = 0.0) -> dict:
     """
-    Move the drone relative to the current position using MAVSDK offboard mode.
-    Works with both PX4 and ArduPilot drones. The drone must be armed and in the air.
-    Waits for connection if not ready.
+    Move the drone relative to the current position using ArduPilot's GUIDED mode.
+    
+    ArduPilot automatically enters GUIDED mode when receiving goto_location commands
+    (as long as the drone is armed). No manual mode switching required.
+    
+    The drone must be armed and in the air. Waits for connection if not ready.
 
     Args:
         ctx (Context): the context.
@@ -315,20 +232,15 @@ async def move_to_relative(ctx: Context, north_m: float, east_m: float, down_m: 
     drone = connector.drone
 
     try:
-<<<<<<< HEAD
         # Get current position
         position = await drone.telemetry.position().__anext__()
         current_lat = position.latitude_deg
         current_lon = position.longitude_deg
         current_alt = position.relative_altitude_m
-=======
-        logger.info(f"Setting offboard mode for relative movement: north={north_m}m, east={east_m}m, down={down_m}m")
->>>>>>> 3854d4a (Fix CRITICAL: Restore MAVSDK offboard API for drone movement)
         
-        # Start offboard mode with initial position
-        await drone.offboard.set_position_ned(PositionNedYaw(north_m, east_m, down_m, yaw_deg))
+        # Calculate target altitude (down is positive in NED, so negate)
+        target_alt = current_alt - down_m
         
-<<<<<<< HEAD
         # Convert NED offsets (meters) to lat/lon offsets (degrees)
         # Earth radius in meters (approximate)
         EARTH_RADIUS = 6371000.0
@@ -368,25 +280,6 @@ async def move_to_relative(ctx: Context, north_m: float, east_m: float, down_m: 
                 "altitude_m": target_alt
             }
         }
-=======
-        try:
-            await drone.offboard.start()
-            logger.info("✓ Offboard mode started")
-        except OffboardError as error:
-            if "COMMAND_DENIED" in str(error):
-                logger.info("Drone already in offboard mode, continuing")
-            else:
-                raise
-        
-        # Hold position for a moment
-        await asyncio.sleep(0.5)
-        
-        # Send the movement command again to ensure it's processed
-        await drone.offboard.set_position_ned(PositionNedYaw(north_m, east_m, down_m, yaw_deg))
-        
-        logger.info("✓ Movement command sent successfully")
-        return {"status": "success", "message": f"Moving: north={north_m}m, east={east_m}m, down={down_m}m, yaw={yaw_deg}°"}
->>>>>>> 3854d4a (Fix CRITICAL: Restore MAVSDK offboard API for drone movement)
         
     except Exception as e:
         logger.error(f"Failed to execute relative movement: {e}")
