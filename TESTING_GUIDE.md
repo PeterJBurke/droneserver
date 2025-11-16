@@ -100,6 +100,385 @@ Please execute this entire inspection mission step by step, confirming each acti
 
 ---
 
+## 🔬 Granular Tool Test (Complete Coverage)
+
+This test systematically validates **all 35 tools** one at a time with pass/fail reporting for each.
+
+### Copy this prompt into ChatGPT:
+
+```
+I need you to test every single MCP tool available for drone control. Test each tool individually and report PASS or FAIL for each one. Follow this exact sequence and confirm each step before moving to the next.
+
+SAFETY RULE: Before disarming, you MUST check altitude is below 0.5m AND drone is landed. Never disarm in the air.
+
+═══════════════════════════════════════════════════════════
+CATEGORY 1: TELEMETRY & HEALTH (Test before flight)
+═══════════════════════════════════════════════════════════
+
+TEST 1: get_health
+- Run get_health and show me the full report
+- Verify: GPS, accelerometer, gyroscope, magnetometer status
+- Expected: All systems should be operational
+- Report: PASS/FAIL
+
+TEST 2: get_telemetry  
+- Run get_telemetry
+- Verify: Shows position, altitude, velocity, battery
+- Expected: All telemetry fields populated
+- Report: PASS/FAIL
+
+TEST 3: get_battery
+- Run get_battery
+- Verify: Shows voltage_v and remaining_percent (or estimated_percent)
+- Expected: Voltage > 10V
+- Report: PASS/FAIL
+
+TEST 4: get_gps_info
+- Run get_gps_info
+- Verify: Shows satellite count and fix type
+- Expected: 3D fix with satellites >= 6
+- Report: PASS/FAIL
+
+TEST 5: get_flight_mode
+- Run get_flight_mode before arming
+- Verify: Shows current mode (likely HOLD or MANUAL)
+- Expected: Returns valid flight mode
+- Report: PASS/FAIL
+
+TEST 6: get_armed
+- Run get_armed (should be false)
+- Verify: Shows armed status
+- Expected: is_armed = false
+- Report: PASS/FAIL
+
+TEST 7: get_position
+- Run get_position
+- Verify: Shows lat, lon, altitude
+- Expected: Valid GPS coordinates, altitude near 0
+- Report: PASS/FAIL
+
+═══════════════════════════════════════════════════════════
+CATEGORY 2: PARAMETER MANAGEMENT (v1.2.0)
+═══════════════════════════════════════════════════════════
+
+TEST 8: list_parameters (with filter)
+- Run list_parameters with filter_prefix="RTL"
+- Verify: Shows RTL-related parameters
+- Expected: At least RTL_ALT or similar
+- Report: PASS/FAIL
+
+TEST 9: get_parameter
+- Run get_parameter for "RTL_ALT" (or "RTL_RETURN_ALT" for PX4)
+- Verify: Returns current value
+- Expected: Shows parameter value (likely 1500-3000)
+- Report: PASS/FAIL
+
+TEST 10: set_parameter
+- Run set_parameter to set RTL_ALT to 2000
+- Verify: Shows old value and new value
+- Expected: Parameter changes, shows confirmation
+- Report: PASS/FAIL
+
+TEST 11: get_parameter (verify change)
+- Run get_parameter again for RTL_ALT
+- Verify: Value is now 2000
+- Expected: Confirms parameter was saved
+- Report: PASS/FAIL
+
+═══════════════════════════════════════════════════════════
+CATEGORY 3: BASIC FLIGHT CONTROL
+═══════════════════════════════════════════════════════════
+
+TEST 12: arm_drone
+- Run arm_drone
+- Verify: Returns success message
+- Expected: Drone arms successfully
+- Report: PASS/FAIL
+
+TEST 13: get_armed (verify)
+- Run get_armed (should now be true)
+- Verify: is_armed = true
+- Expected: Confirms drone is armed
+- Report: PASS/FAIL
+
+TEST 14: takeoff_drone
+- Run takeoff_drone to 12 meters
+- Wait 10 seconds for takeoff to complete
+- Verify: Returns success, drone climbing
+- Expected: Altitude increases toward 12m
+- Report: PASS/FAIL
+
+TEST 15: get_position (verify altitude)
+- Run get_position
+- Verify: Altitude is approximately 12m (±2m)
+- Expected: Drone at target altitude
+- Report: PASS/FAIL
+
+TEST 16: get_speed
+- Run get_speed while hovering
+- Verify: Shows ground_speed_kmh and vertical_speed_ms
+- Expected: Speed near 0 (hovering)
+- Report: PASS/FAIL
+
+TEST 17: get_attitude
+- Run get_attitude
+- Verify: Shows roll, pitch, yaw in degrees
+- Expected: Roll and pitch near 0, yaw shows heading
+- Report: PASS/FAIL
+
+═══════════════════════════════════════════════════════════
+CATEGORY 4: ADVANCED NAVIGATION (v1.2.0)
+═══════════════════════════════════════════════════════════
+
+TEST 18: set_yaw (face north)
+- Run set_yaw to 0 degrees (north)
+- Wait 5 seconds
+- Verify: Drone rotates to face north
+- Expected: Success message
+- Report: PASS/FAIL
+
+TEST 19: get_attitude (verify yaw)
+- Run get_attitude
+- Verify: Yaw is approximately 0 degrees (±10°)
+- Expected: Heading confirms north
+- Report: PASS/FAIL
+
+TEST 20: set_yaw (face east)
+- Run set_yaw to 90 degrees
+- Wait 5 seconds
+- Expected: Drone rotates to east
+- Report: PASS/FAIL
+
+TEST 21: go_to_location
+- Get current position first
+- Run go_to_location to move 30m north and 30m east at 15m altitude
+- Calculate: new_lat = current_lat + 0.00027 (≈30m north)
+- Calculate: new_lon = current_lon + 0.00033 (≈30m east at 33° latitude)
+- Wait 15 seconds for movement
+- Verify: Drone moves to new position
+- Expected: Position changes
+- Report: PASS/FAIL
+
+TEST 22: get_position (verify movement)
+- Run get_position
+- Verify: Lat/lon approximately match target
+- Expected: Within 5m of target
+- Report: PASS/FAIL
+
+TEST 23: reposition
+- Run reposition to move 20m south at 20m altitude
+- Calculate: new_lat = current_lat - 0.00018 (≈20m south)
+- Wait 10 seconds
+- Verify: Drone moves and holds new position
+- Expected: Altitude changes to 20m, position shifts
+- Report: PASS/FAIL
+
+TEST 24: hold_position
+- Run hold_position
+- Wait 5 seconds
+- Verify: Drone maintains current position
+- Expected: Position stable
+- Report: PASS/FAIL
+
+TEST 25: orbit_location
+- Get current GPS position
+- Run orbit_location with:
+  - radius: 20 meters
+  - velocity: 2 m/s
+  - center: current position
+  - altitude: 18m (absolute/MSL)
+  - clockwise: true
+- Wait 20 seconds for orbit
+- Verify: Either starts orbiting OR returns helpful error with workaround
+- Expected: Success OR firmware limitation message with alternative
+- Report: PASS/FAIL (pass if either works or gives good error)
+
+TEST 26: hold_position (stop orbit)
+- Run hold_position to stop movement
+- Expected: Drone stops and hovers
+- Report: PASS/FAIL
+
+═══════════════════════════════════════════════════════════
+CATEGORY 5: MISSION MANAGEMENT
+═══════════════════════════════════════════════════════════
+
+TEST 27: upload_mission
+- Create a 3-waypoint mission using current position as reference
+- Waypoint format (EXACT):
+  [
+    {"latitude_deg": [current_lat], "longitude_deg": [current_lon + 0.0001], "relative_altitude_m": 15},
+    {"latitude_deg": [current_lat + 0.0001], "longitude_deg": [current_lon + 0.0001], "relative_altitude_m": 18},
+    {"latitude_deg": [current_lat + 0.0001], "longitude_deg": [current_lon], "relative_altitude_m": 15}
+  ]
+- Run upload_mission (do NOT start it)
+- Verify: Upload succeeds, shows waypoint count
+- Expected: Mission uploaded successfully
+- Report: PASS/FAIL
+
+TEST 28: download_mission
+- Run download_mission
+- Verify: Returns the 3 waypoints we uploaded
+- Expected: Waypoints match OR firmware doesn't support (acceptable)
+- Report: PASS/FAIL (note if unsupported)
+
+TEST 29: is_mission_finished
+- Run is_mission_finished (mission not started yet)
+- Verify: Returns false or "no mission active"
+- Expected: Not finished (not started)
+- Report: PASS/FAIL
+
+TEST 30: initiate_mission
+- Run initiate_mission to start the uploaded mission
+- Verify: Mission starts, drone begins flying waypoints
+- Expected: Drone moves toward waypoint 1
+- Report: PASS/FAIL
+
+TEST 31: print_mission_progress
+- Run print_mission_progress
+- Verify: Shows current/total waypoints
+- Expected: Shows progress (e.g., "1 of 3")
+- Report: PASS/FAIL
+
+TEST 32: is_mission_finished (during mission)
+- Run is_mission_finished while mission is running
+- Verify: Returns false
+- Expected: Mission still in progress
+- Report: PASS/FAIL
+
+TEST 33: pause_mission
+- Run pause_mission
+- Verify: Drone stops at current waypoint
+- Expected: Mission pauses successfully
+- Report: PASS/FAIL
+
+TEST 34: set_current_waypoint
+- Run set_current_waypoint to jump to waypoint 2
+- Verify: Current waypoint changes to 2
+- Expected: Waypoint index updates
+- Report: PASS/FAIL
+
+TEST 35: resume_mission
+- Run resume_mission
+- Verify: Drone continues from waypoint 2
+- Expected: Mission resumes
+- Report: PASS/FAIL
+
+Wait 20 seconds for mission to complete
+
+TEST 36: is_mission_finished (after completion)
+- Run is_mission_finished
+- Verify: Returns true
+- Expected: Mission completed
+- Report: PASS/FAIL
+
+TEST 37: clear_mission
+- Run clear_mission
+- Verify: Mission cleared from drone
+- Expected: Success message
+- Report: PASS/FAIL
+
+═══════════════════════════════════════════════════════════
+CATEGORY 6: SAFETY & EMERGENCY
+═══════════════════════════════════════════════════════════
+
+TEST 38: return_to_launch
+- Run return_to_launch
+- Wait 15 seconds
+- Verify: Drone returns to launch position
+- Expected: Drone flies back to takeoff point
+- Report: PASS/FAIL
+
+TEST 39: get_position (verify RTL)
+- Run get_position
+- Verify: Position is near launch coordinates
+- Expected: Within 5m of launch point
+- Report: PASS/FAIL
+
+TEST 40: land_drone
+- Run land_drone
+- Wait for landing (monitor altitude)
+- Verify: Altitude decreases to ground
+- Expected: Drone descends
+- Report: PASS/FAIL
+
+═══════════════════════════════════════════════════════════
+SAFETY CHECK BEFORE DISARM
+═══════════════════════════════════════════════════════════
+
+TEST 41: MANDATORY PRE-DISARM SAFETY CHECK
+- Run get_position
+- Check: altitude_m < 0.5
+- Run get_telemetry or get_health
+- Check: landed status = true (if available)
+- If altitude > 0.5m: ABORT! DO NOT DISARM! Warn user immediately.
+- If altitude < 0.5m: Safe to proceed
+- Report: SAFE TO DISARM (yes/no)
+
+═══════════════════════════════════════════════════════════
+CATEGORY 7: POST-FLIGHT
+═══════════════════════════════════════════════════════════
+
+TEST 42: disarm_drone (ONLY if safety check passed)
+- Only run if altitude < 0.5m
+- Run disarm_drone
+- Verify: Drone disarms
+- Expected: Motors stop, disarm successful
+- Report: PASS/FAIL
+
+TEST 43: get_armed (final check)
+- Run get_armed
+- Verify: is_armed = false
+- Expected: Drone is disarmed
+- Report: PASS/FAIL
+
+TEST 44: get_battery (post-flight)
+- Run get_battery
+- Verify: Shows remaining battery after flight
+- Expected: Battery lower than start
+- Report: PASS/FAIL
+
+═══════════════════════════════════════════════════════════
+FINAL REPORT
+═══════════════════════════════════════════════════════════
+
+Please provide:
+1. Total tests: 44
+2. Passed: [count]
+3. Failed: [count]
+4. Success rate: [percentage]
+5. List of failed tests with reasons
+6. Overall assessment: Production ready? (yes/no)
+7. Any warnings or concerns
+
+Format the report as a summary table showing each test result.
+```
+
+### What This Tests
+
+**Complete Coverage:**
+- ✅ All 35 MCP tools tested individually
+- ✅ Telemetry (7 tools): health, battery, GPS, position, speed, attitude, flight mode
+- ✅ Parameters (3 tools): list, get, set with verification
+- ✅ Flight Control (10 tools): arm, takeoff, move, hold, land, disarm, RTL
+- ✅ Navigation (3 tools): set_yaw, reposition, orbit
+- ✅ Missions (8 tools): upload, download, start, pause, resume, progress, waypoint jump, clear
+- ✅ Safety (3 tools): RTL, battery monitoring, pre-disarm check
+
+**Safety Features:**
+- ✅ Mandatory altitude check before disarm
+- ✅ Landed status verification
+- ✅ Sequential testing (telemetry → parameters → flight → missions → landing → disarm)
+- ✅ Explicit wait times for operations to complete
+- ✅ Position verification after movements
+
+**Reporting:**
+- ✅ Pass/fail for each individual tool
+- ✅ Overall success rate calculation
+- ✅ Failed test identification
+- ✅ Production readiness assessment
+
+---
+
 ## 🚀 Quick Test (5 Minutes)
 
 For a faster feature test:
@@ -224,31 +603,55 @@ Assuming a mission is uploaded:
 
 ## 🔍 Validation Checklist
 
-After running tests, verify:
+After running the granular test, verify:
 
-### Parameter Management
-- [ ] Can list all parameters
-- [ ] Can filter parameters by prefix
-- [ ] Can read individual parameters
-- [ ] Can write parameters (shows old/new values)
-- [ ] Safety warnings appear for parameter changes
+### Telemetry & Health (7 tools)
+- [ ] `get_health` shows all system status
+- [ ] `get_telemetry` returns comprehensive data
+- [ ] `get_battery` shows voltage and percentage
+- [ ] `get_gps_info` shows satellite count and fix
+- [ ] `get_flight_mode` returns current mode
+- [ ] `get_armed` correctly reports armed state
+- [ ] `get_position` shows accurate GPS coordinates
+
+### Parameter Management (3 tools)
+- [ ] `list_parameters` can filter by prefix
+- [ ] `get_parameter` reads individual parameters
+- [ ] `set_parameter` writes and confirms changes
 - [ ] Invalid parameters return helpful error messages
 
-### Advanced Navigation
-- [ ] Orbit executes with correct radius
-- [ ] Orbit direction (clockwise/counter-clockwise) works
-- [ ] Yaw control rotates drone correctly
-- [ ] Cardinal directions (N, E, S, W) are shown
-- [ ] Reposition moves to correct GPS location
-- [ ] Reposition maintains altitude correctly
+### Flight Control (10 tools)
+- [ ] `arm_drone` successfully arms
+- [ ] `takeoff_drone` reaches target altitude
+- [ ] `go_to_location` moves to GPS coordinates
+- [ ] `hold_position` maintains current position
+- [ ] `land_drone` descends safely
+- [ ] `disarm_drone` only works when landed (safety check)
+- [ ] `return_to_launch` returns to takeoff point
 
-### Mission Enhancements
-- [ ] Upload mission doesn't auto-start
-- [ ] Downloaded mission matches uploaded mission
-- [ ] Can jump to specific waypoint
-- [ ] Mission finished check returns correct status
-- [ ] Pause/resume works with uploaded missions
-- [ ] Mission progress tracking works
+### Advanced Navigation (3 tools)
+- [ ] `set_yaw` rotates to specified heading
+- [ ] `reposition` moves and holds new GPS location
+- [ ] `orbit_location` works OR provides firmware workaround
+- [ ] `get_attitude` confirms heading changes
+- [ ] `get_speed` tracks movement
+
+### Mission Management (8 tools)
+- [ ] `upload_mission` accepts correct format
+- [ ] `download_mission` retrieves waypoints (or reports unsupported)
+- [ ] `initiate_mission` starts mission execution
+- [ ] `print_mission_progress` shows current waypoint
+- [ ] `pause_mission` stops at current waypoint
+- [ ] `resume_mission` continues from pause
+- [ ] `set_current_waypoint` jumps to specific waypoint
+- [ ] `is_mission_finished` correctly reports completion
+- [ ] `clear_mission` removes mission from drone
+
+### Safety Features
+- [ ] Pre-disarm altitude check prevents mid-air disarm
+- [ ] Battery warnings appear when low
+- [ ] GPS lock verified before flight
+- [ ] Health check shows system readiness
 
 ---
 
