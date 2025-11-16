@@ -47,20 +47,33 @@ if __name__ == "__main__":
     logger.info("=" * 60)
     
     # Import the mcp instance with all tools registered
-    from src.server.mavlinkmcp import mcp, initialize_drone_connection
-    import asyncio
+    from src.server.mavlinkmcp import mcp
+    import threading
+    import time
+    import requests
     
     # Update settings on the existing mcp instance
     mcp.settings.host = HOST
     mcp.settings.port = PORT
     
-    # Add startup event to initialize drone connection
-    @mcp._app.on_event("startup")
-    async def startup_event():
-        """Initialize drone connection when server starts"""
-        logger.info("🔧 Server startup event triggered - initializing drone connection...")
-        # Schedule the initialization in the background
-        asyncio.create_task(initialize_drone_connection())
+    # Trigger connection initialization after server starts
+    def trigger_initialization():
+        """Make a request to the server to trigger lifespan and connection initialization"""
+        logger.info("🔧 Background: Waiting for server to start...")
+        time.sleep(3)  # Give uvicorn time to fully start
+        
+        try:
+            logger.info("🔧 Triggering connection initialization via GET /sse...")
+            # Make a simple GET request to trigger the lifespan
+            response = requests.get(f"http://localhost:{PORT}/sse", timeout=5)
+            logger.info(f"✓ Initialization request completed (status: {response.status_code})")
+        except Exception as e:
+            logger.warning(f"Initialization trigger request failed (this is normal): {e}")
+            logger.info("Connection will initialize on first ChatGPT request instead.")
+    
+    # Start background thread to trigger initialization
+    init_thread = threading.Thread(target=trigger_initialization, daemon=True)
+    init_thread.start()
     
     # Run server with SSE transport using default mount path
     mcp.run(transport='sse')
