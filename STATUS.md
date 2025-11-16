@@ -1,18 +1,18 @@
 # MAVLink MCP - Project Status & Roadmap
 
-## ✅ Current Status (v1.1.0)
+## ✅ Current Status (v1.2.0 - In Development)
 
-### Production Ready
-The MAVLink MCP Server is **production-ready** with complete flight operations and safety features.
+### Production Ready with Parameter Management
+The MAVLink MCP Server is **production-ready** with complete flight operations, safety features, and parameter management.
 
 **Last Updated:** November 16, 2025  
-**Version:** 1.1.0  
-**Total Tools:** 25 MCP tools  
+**Version:** 1.2.0 (in development)  
+**Total Tools:** 28 MCP tools (3 new)  
 **Tested With:** ArduPilot, ChatGPT Developer Mode
 
 ---
 
-## 🎯 Available Tools (25 Total)
+## 🎯 Available Tools (28 Total)
 
 ### Basic Flight Control (5 tools)
 - ✅ `arm_drone` - Arm motors for flight
@@ -50,6 +50,11 @@ The MAVLink MCP Server is **production-ready** with complete flight operations a
 - ✅ `get_armed` - Motor armed status
 - ✅ `print_status_text` - Status message streaming
 - ✅ `get_imu` - IMU sensor data (accel, gyro, mag)
+
+### Parameter Management (3 tools) 🆕
+- ✅ `get_parameter` - Read drone parameters (auto-detect type)
+- ✅ `set_parameter` - Write drone parameters (with safety warnings)
+- ✅ `list_parameters` - List all parameters (with filtering)
 
 ---
 
@@ -100,21 +105,20 @@ The MAVLink MCP Server is **production-ready** with complete flight operations a
 1. **Battery Telemetry** - May show 0% on some simulated drones (works on real hardware)
 2. **Windows Support** - Primarily tested on Ubuntu 24.04
 3. **Single Drone** - One drone per server instance currently
-4. **Parameter Access** - Cannot get/set ArduPilot parameters yet (planned for v1.2.0)
 
 ---
 
 ## 🚀 Development Roadmap
 
-### v1.2.0 - Advanced Features (Next Release)
+### v1.2.0 - Advanced Features (In Progress) ✅
 
 **Target:** 1-2 months  
 **Focus:** Advanced control and mission planning
 
-#### Parameter Management
-- [ ] `get_parameter` - Read drone parameters
-- [ ] `set_parameter` - Write drone parameters
-- [ ] `list_parameters` - List all available parameters
+#### Parameter Management ✅ COMPLETE
+- ✅ `get_parameter` - Read drone parameters (implemented Nov 16, 2025)
+- ✅ `set_parameter` - Write drone parameters (implemented Nov 16, 2025)
+- ✅ `list_parameters` - List all available parameters (implemented Nov 16, 2025)
 
 #### Advanced Navigation
 - [ ] `land_at_location` - Land at specific GPS coordinates
@@ -204,14 +208,14 @@ The MAVLink MCP Server is **production-ready** with complete flight operations a
 
 ## 📊 Version Comparison
 
-| Feature | v1.0.0 | v1.1.0 | v1.2.0 (Planned) |
+| Feature | v1.0.0 | v1.1.0 | v1.2.0 (In Dev) |
 |---------|--------|--------|------------------|
-| **Total Tools** | 10 | 25 | ~35 |
-| **Safety Tools** | 1 | 5 | 7 |
+| **Total Tools** | 10 | 25 | 28 (current) |
+| **Safety Tools** | 1 | 5 | 5 |
 | **Complete Flight Cycle** | ❌ | ✅ | ✅ |
 | **Emergency Procedures** | ❌ | ✅ | ✅ |
 | **Battery Monitoring** | ❌ | ✅ | ✅ |
-| **Parameter Access** | ❌ | ❌ | ✅ |
+| **Parameter Access** | ❌ | ❌ | ✅ **NEW** |
 | **Production Ready** | ❌ | ✅ | ✅ |
 
 ---
@@ -240,6 +244,20 @@ The MAVLink MCP Server is **production-ready** with complete flight operations a
 ---
 
 ## 🔧 Recent Changes
+
+### November 16, 2025 - v1.2.0 Development: Parameter Management ✅
+**Added:** 3 new parameter management tools
+- `get_parameter` - Read any drone parameter with auto-type detection
+- `set_parameter` - Write parameters with safety warnings
+- `list_parameters` - List all parameters with optional filtering
+
+**Features:**
+- Auto-detect parameter types (int/float)
+- Filter parameters by prefix (e.g., "BATT" for battery params)
+- Safety warnings for parameter changes
+- Show old vs new values when setting params
+
+**Status:** Parameter Management complete! 28 tools total (+3 from v1.1.0)
 
 ### November 16, 2025 - Documentation Cleanup
 - Removed historical development notes
@@ -298,8 +316,8 @@ We welcome contributions! Priority areas:
 
 ---
 
-**Current Version:** v1.1.0  
-**Status:** ✅ Production Ready  
-**Next Release:** v1.2.0 (Parameters & Advanced Navigation)  
+**Current Version:** v1.2.0 (in development)  
+**Status:** ✅ Production Ready + Parameter Management  
+**Next Milestone:** Advanced Navigation & Mission Enhancements  
 **Maintainer:** Peter J Burke  
 **Original Author:** Ion Gabriel
