@@ -55,6 +55,31 @@ sudo systemctl start mavlinkmcp ngrok
 
 📖 **[Complete Service Setup Guide →](SERVICE_SETUP.md)**
 
+### 🔄 Updating Your Running Server
+
+If you're already running the services and need to pull updates from GitHub:
+
+```bash
+# On your server
+cd ~/MAVLinkMCP
+
+# Pull latest code
+git pull origin main
+
+# Update dependencies (if needed)
+uv sync
+
+# Restart the service to load new code
+sudo systemctl restart mavlinkmcp
+
+# Check status
+sudo systemctl status mavlinkmcp
+```
+
+**Note:** The ngrok service doesn't need to be restarted unless its configuration changed. Your ngrok URL remains the same.
+
+📖 **[Complete Update Guide →](LIVE_SERVER_UPDATE.md)**
+
 ---
 
 ## Prerequisites
