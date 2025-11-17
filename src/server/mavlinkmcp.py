@@ -2072,20 +2072,22 @@ async def upload_mission(ctx: Context, waypoints: list) -> dict:
             if wp["relative_altitude_m"] < 0:
                 return {"status": "failed", "error": f"Waypoint {i}: altitude cannot be negative"}
             
+            # Use named parameters to match initiate_mission implementation
             mission_item = MissionItem(
-                float(wp["latitude_deg"]),
-                float(wp["longitude_deg"]),
-                float(wp["relative_altitude_m"]),
-                float(wp.get("speed_m_s", float('nan'))),
-                True,  # is_fly_through
-                float('nan'),  # gimbal_pitch_deg
-                float('nan'),  # gimbal_yaw_deg
-                MissionItem.CameraAction.NONE,
-                float('nan'),  # loiter_time_s
-                float('nan'),  # camera_photo_interval_s
-                float('nan'),  # acceptance_radius_m
-                float('nan'),  # yaw_deg
-                float('nan')   # camera_photo_distance_m
+                latitude_deg=float(wp["latitude_deg"]),
+                longitude_deg=float(wp["longitude_deg"]),
+                relative_altitude_m=float(wp["relative_altitude_m"]),
+                speed_m_s=float(wp.get("speed_m_s", float('nan'))),
+                is_fly_through=True,
+                gimbal_pitch_deg=float('nan'),
+                gimbal_yaw_deg=float('nan'),
+                camera_action=MissionItem.CameraAction.NONE,
+                loiter_time_s=float('nan'),
+                camera_photo_interval_s=float('nan'),
+                acceptance_radius_m=float('nan'),
+                yaw_deg=float('nan'),
+                camera_photo_distance_m=float('nan'),
+                vehicle_action=MissionItem.VehicleAction.NONE  # ← FIXED: Added missing parameter
             )
             mission_items.append(mission_item)
         
@@ -2166,8 +2168,23 @@ async def download_mission(ctx: Context) -> dict:
             "waypoints": waypoints
         }
     except Exception as e:
+        error_str = str(e)
         logger.error(f"Mission download failed: {e}")
-        return {"status": "failed", "error": f"Mission download failed: {str(e)}"}
+        
+        # Provide helpful error message
+        if "UNSUPPORTED" in error_str.upper():
+            return {
+                "status": "failed", 
+                "error": "Mission download failed - no mission available or mission was cleared",
+                "hint": "Upload a mission first using upload_mission or initiate_mission before downloading",
+                "technical_error": error_str
+            }
+        else:
+            return {
+                "status": "failed", 
+                "error": f"Mission download failed: {error_str}",
+                "hint": "Ensure a mission has been uploaded to the drone"
+            }
 
 @mcp.tool()
 async def set_current_waypoint(ctx: Context, waypoint_index: int) -> dict:
