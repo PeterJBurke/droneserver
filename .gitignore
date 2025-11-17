@@ -142,6 +142,9 @@ config.yaml
 drone_config.yaml
 *.secrets.yaml
 
+# Flight logs
+flight_logs/
+
 # Spyder project settings
 .spyderproject
 .spyproject

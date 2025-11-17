@@ -32,21 +32,72 @@ import sys
 sys.stdout.reconfigure(line_buffering=True) if hasattr(sys.stdout, 'reconfigure') else None
 sys.stderr.reconfigure(line_buffering=True) if hasattr(sys.stderr, 'reconfigure') else None
 
+# ============================================================
+# Flight Logging System
+# ============================================================
+from datetime import datetime
+
+class FlightLogger:
+    """Logs flight operations to a timestamped file"""
+    def __init__(self):
+        self.log_dir = Path(__file__).parent.parent.parent / "flight_logs"
+        self.log_dir.mkdir(exist_ok=True)
+        
+        # Create log file with timestamp
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        self.log_file = self.log_dir / f"flight_{timestamp}.log"
+        
+        # Write header
+        with open(self.log_file, 'w') as f:
+            f.write("=" * 80 + "\n")
+            f.write(f"MAVLink MCP Flight Log\n")
+            f.write(f"Started: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
+            f.write("=" * 80 + "\n\n")
+        
+        logger.info(f"✈️ Flight log created: {self.log_file}")
+    
+    def log_entry(self, entry_type: str, message: str):
+        """Write a timestamped entry to the log file"""
+        timestamp = datetime.now().strftime("%H:%M:%S.%f")[:-3]  # Include milliseconds
+        try:
+            with open(self.log_file, 'a') as f:
+                f.write(f"[{timestamp}] {entry_type}: {message}\n")
+        except Exception as e:
+            logger.error(f"Failed to write to flight log: {e}")
+
+# Global flight logger instance
+_flight_logger: FlightLogger | None = None
+
+def get_flight_logger() -> FlightLogger:
+    """Get or create the global flight logger"""
+    global _flight_logger
+    if _flight_logger is None:
+        _flight_logger = FlightLogger()
+    return _flight_logger
+
 def log_tool_call(tool_name: str, **kwargs):
     """Log MCP tool call with parameters"""
     if kwargs:
         params_str = ", ".join([f"{k}={v}" for k, v in kwargs.items() if v is not None])
-        logger.info(f"🔧 MCP TOOL: {tool_name}({params_str})")
+        msg = f"{tool_name}({params_str})"
+        logger.info(f"🔧 MCP TOOL: {msg}")
+        get_flight_logger().log_entry("MCP_TOOL", msg)
     else:
-        logger.info(f"🔧 MCP TOOL: {tool_name}()")
+        msg = f"{tool_name}()"
+        logger.info(f"🔧 MCP TOOL: {msg}")
+        get_flight_logger().log_entry("MCP_TOOL", msg)
 
 def log_mavlink_cmd(command: str, **kwargs):
     """Log MAVLink command being sent to drone"""
     if kwargs:
         params_str = ", ".join([f"{k}={v}" for k, v in kwargs.items() if v is not None])
-        logger.info(f"📡 MAVLink → {command}({params_str})")
+        msg = f"{command}({params_str})"
+        logger.info(f"📡 MAVLink → {msg}")
+        get_flight_logger().log_entry("MAVLink_CMD", msg)
     else:
-        logger.info(f"📡 MAVLink → {command}()")
+        msg = f"{command}()"
+        logger.info(f"📡 MAVLink → {msg}")
+        get_flight_logger().log_entry("MAVLink_CMD", msg)
 
 @dataclass
 class MAVLinkConnector:
@@ -615,6 +666,7 @@ async def disarm_drone(ctx: Context) -> dict:
     logger.info("Disarming drone")
     
     try:
+        log_mavlink_cmd("drone.action.disarm")
         await drone.action.disarm()
         return {"status": "success", "message": "Drone disarmed - motors stopped"}
     except Exception as e:
@@ -645,6 +697,7 @@ async def return_to_launch(ctx: Context) -> dict:
     logger.info("Initiating Return to Launch (RTL)")
     
     try:
+        log_mavlink_cmd("drone.action.return_to_launch")
         await drone.action.return_to_launch()
         return {"status": "success", "message": "Return to Launch initiated - drone returning home"}
     except Exception as e:
@@ -676,6 +729,7 @@ async def kill_motors(ctx: Context) -> dict:
     logger.warning("⚠️  EMERGENCY MOTOR KILL ACTIVATED ⚠️")
     
     try:
+        log_mavlink_cmd("drone.action.kill")
         await drone.action.kill()
         return {
             "status": "success", 
@@ -971,6 +1025,7 @@ async def clear_mission(ctx: Context) -> dict:
     logger.info("Clearing mission")
     
     try:
+        log_mavlink_cmd("drone.mission.clear_mission")
         await drone.mission.clear_mission()
         return {"status": "success", "message": "Mission cleared - all waypoints removed"}
     except Exception as e:
@@ -1015,6 +1070,7 @@ async def go_to_location(ctx: Context, latitude_deg: float, longitude_deg: float
     logger.info(f"Flying to GPS location: {latitude_deg}, {longitude_deg} at {absolute_altitude_m}m MSL")
     
     try:
+        log_mavlink_cmd("drone.action.goto_location", lat=f"{latitude_deg:.6f}", lon=f"{longitude_deg:.6f}", alt=f"{absolute_altitude_m:.1f}", yaw=f"{yaw_deg:.1f}" if not math.isnan(yaw_deg) else "nan")
         await drone.action.goto_location(latitude_deg, longitude_deg, absolute_altitude_m, yaw_deg)
         return {
             "status": "success", 
@@ -1095,6 +1151,7 @@ async def set_max_speed(ctx: Context, speed_m_s: float) -> dict:
     logger.info(f"Setting maximum speed to {speed_m_s} m/s")
     
     try:
+        log_mavlink_cmd("drone.action.set_maximum_speed", speed_m_s=speed_m_s)
         await drone.action.set_maximum_speed(speed_m_s)
         return {
             "status": "success", 
@@ -1430,8 +1487,10 @@ async def set_parameter(ctx: Context, name: str, value: float, param_type: str =
         
         # Set new value
         if param_type_final == "int":
+            log_mavlink_cmd("drone.param.set_param_int", name=name, value=int(value))
             await drone.param.set_param_int(name, int(value))
         else:
+            log_mavlink_cmd("drone.param.set_param_float", name=name, value=float(value))
             await drone.param.set_param_float(name, float(value))
         
         logger.info(f"✓ Parameter {name} changed from {old_value} to {value}")
@@ -1604,6 +1663,9 @@ async def orbit_location(
         # Negative velocity for counter-clockwise
         velocity = velocity_ms if clockwise else -velocity_ms
         
+        log_mavlink_cmd("drone.action.do_orbit", radius=radius_m, velocity=velocity, 
+                       lat=f"{latitude_deg:.6f}", lon=f"{longitude_deg:.6f}", 
+                       alt=f"{absolute_altitude_m:.1f}")
         await drone.action.do_orbit(
             radius_m, 
             velocity, 
@@ -1711,6 +1773,9 @@ async def set_yaw(ctx: Context, yaw_deg: float, yaw_rate_deg_s: float = 30.0) ->
             current_alt = position.absolute_altitude_m
             
             # Use goto_location with current position but new yaw
+            log_mavlink_cmd("drone.action.goto_location", lat=f"{current_lat:.6f}", 
+                           lon=f"{current_lon:.6f}", alt=f"{current_alt:.1f}", 
+                           yaw=f"{yaw_normalized:.1f}")
             await drone.action.goto_location(
                 current_lat,
                 current_lon,
@@ -1783,6 +1848,8 @@ async def reposition(
     
     try:
         # Move to new location (will loiter automatically in GUIDED mode)
+        log_mavlink_cmd("drone.action.goto_location", lat=f"{latitude_deg:.6f}", 
+                       lon=f"{longitude_deg:.6f}", alt=f"{altitude_m:.1f}", yaw="nan")
         await drone.action.goto_location(
             latitude_deg,
             longitude_deg,
@@ -1922,6 +1989,7 @@ async def upload_mission(ctx: Context, waypoints: list) -> dict:
         mission_plan = MissionPlan(mission_items)
         
         # Upload mission (does not start it)
+        log_mavlink_cmd("drone.mission.upload_mission", waypoint_count=len(waypoints))
         await drone.mission.upload_mission(mission_plan)
         
         logger.info(f"✓ Mission uploaded successfully: {len(waypoints)} waypoints")
@@ -1973,6 +2041,7 @@ async def download_mission(ctx: Context) -> dict:
     logger.info("Downloading mission from drone")
     
     try:
+        log_mavlink_cmd("drone.mission.download_mission")
         mission_plan = await drone.mission.download_mission()
         
         # Convert mission items to dict format
@@ -2034,6 +2103,7 @@ async def set_current_waypoint(ctx: Context, waypoint_index: int) -> dict:
     logger.info(f"Setting current mission waypoint to index {waypoint_index}")
     
     try:
+        log_mavlink_cmd("drone.mission.set_current_mission_item", waypoint_index=waypoint_index)
         await drone.mission.set_current_mission_item(waypoint_index)
         
         logger.info(f"✓ Current waypoint set to index {waypoint_index}")
@@ -2077,6 +2147,7 @@ async def is_mission_finished(ctx: Context) -> dict:
     logger.info("Checking if mission is finished")
     
     try:
+        log_mavlink_cmd("drone.mission.is_mission_finished")
         finished = await drone.mission.is_mission_finished()
         
         status_text = "FINISHED" if finished else "IN PROGRESS"

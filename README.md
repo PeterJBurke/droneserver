@@ -10,6 +10,7 @@ A Python-based Model Context Protocol (MCP) server for AI-powered drone control.
 - 📡 **Network/Serial Support**: Connect via UDP, TCP, or serial ports
 - 🛡️ **Safe Configuration**: Secure handling of connection credentials
 - 💬 **ChatGPT Integration**: Direct control from ChatGPT web interface (see below)
+- 📝 **Flight Logging**: Automatic logging of all tool calls and MAVLink commands for debugging and auditing (see [FLIGHT_LOGS.md](FLIGHT_LOGS.md))
 
 ## 🌐 Control Your Drone with ChatGPT (NEW!)
 
@@ -421,6 +422,7 @@ The MCP server exposes **35 tools** for complete drone control:
 **See [STATUS.md](STATUS.md) for complete tool list and descriptions.**
 
 ### Recent Updates
+- ✅ **Nov 17, 2025**: Added automatic flight logging - all tool calls and MAVLink commands logged to timestamped files for debugging and auditing
 - ✅ **Nov 16, 2025**: v1.2.1 patch - improved error handling based on comprehensive testing (mission validation, orbit detection, battery fallback)
 - ✅ **Nov 16, 2025**: v1.2.0 near complete - added 7 tools for advanced navigation & missions (orbit, yaw, reposition, mission mgmt)
 - ✅ **Nov 16, 2025**: v1.2.0 development - added 3 parameter management tools (get/set/list params)
