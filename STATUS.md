@@ -1,13 +1,25 @@
 # MAVLink MCP - Project Status & Roadmap
 
-## ✅ Current Status (v1.2.0 - Near Complete)
+## 🔴 CRITICAL SAFETY UPDATE (v1.2.3)
 
-### Production Ready with Advanced Features
-The MAVLink MCP Server is **production-ready** with complete flight operations, safety features, parameter management, advanced navigation, and mission enhancements.
+**⛔ `pause_mission()` HAS BEEN DEPRECATED DUE TO CRASH RISK ⛔**
+
+During flight testing, `pause_mission()` caused a **drone crash** by descending from 25m to ground impact. The tool entered LOITER mode, which **does NOT hold current altitude** in ArduPilot.
+
+**✅ SAFE ALTERNATIVE:** Use `hold_mission_position()` which stays in GUIDED mode.
+
+**See:** [LOITER_MODE_CRASH_REPORT.md](LOITER_MODE_CRASH_REPORT.md) for full details.
+
+---
+
+## ✅ Current Status (v1.2.3 - SAFETY FIX)
+
+### Production Ready with Critical Safety Fix
+The MAVLink MCP Server is **production-ready** with complete flight operations, safety features, parameter management, advanced navigation, and mission enhancements. **v1.2.3 fixes a critical crash issue.**
 
 **Last Updated:** November 17, 2025  
-**Version:** 1.2.2 (with mission improvements)  
-**Total Tools:** 36 MCP tools (+11 from v1.1.0)  
+**Version:** 1.2.3 (with critical safety fix)  
+**Total Tools:** 36 MCP tools (1 deprecated for safety)  
 **Tested With:** ArduPilot, ChatGPT Developer Mode
 
 ---
@@ -39,8 +51,8 @@ The MAVLink MCP Server is **production-ready** with complete flight operations, 
 ### Mission Management (10 tools)
 - ✅ `initiate_mission` - Upload and start waypoint missions
 - ✅ `print_mission_progress` - Mission status monitoring
-- ✅ `pause_mission` - Pause current mission (enters LOITER mode)
-- ✅ `hold_mission_position` - **NEW** Hold position in GUIDED mode (avoids LOITER)
+- ⛔ `pause_mission` - **DEPRECATED** - Unsafe, causes crashes (use hold_mission_position)
+- ✅ `hold_mission_position` - **NEW** Hold position in GUIDED mode (SAFE alternative)
 - ✅ `resume_mission` - Resume paused mission (with diagnostics)
 - ✅ `clear_mission` - Remove all waypoints
 - ✅ `upload_mission` - **NEW** Upload mission without starting
@@ -253,6 +265,16 @@ The MAVLink MCP Server is **production-ready** with complete flight operations, 
 ---
 
 ## 🔧 Recent Changes
+
+### November 17, 2025 - v1.2.3: 🔴 CRITICAL SAFETY FIX 🔴
+**DEPRECATED `pause_mission()` - Causes drone crashes!**
+- **Issue:** Flight testing revealed `pause_mission()` causes altitude descent → ground impact
+- **Root Cause:** LOITER mode does NOT hold current altitude in ArduPilot
+- **Crash Details:** Descended from 25m → 5m → ground impact in 8 seconds
+- **Fix:** `pause_mission()` now returns error and refuses to execute
+- **Safe Alternative:** Use `hold_mission_position()` which stays in GUIDED mode
+- **Documentation:** Added LOITER_MODE_CRASH_REPORT.md with full analysis
+- **Impact:** Prevents future crashes - update immediately if using `pause_mission()`
 
 ### November 17, 2025 - v1.2.2: Mission Control Improvements ✅
 **Added:** `hold_mission_position` tool and enhanced mission diagnostics

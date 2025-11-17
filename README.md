@@ -2,6 +2,13 @@
 
 A Python-based Model Context Protocol (MCP) server for AI-powered drone control. Connect LLMs to MAVLink-enabled drones (PX4, ArduPilot) for natural language flight control.
 
+## 🔴 CRITICAL SAFETY NOTICE (v1.2.3)
+
+**⛔ `pause_mission()` HAS BEEN DEPRECATED ⛔**
+
+During flight testing, this tool caused a drone crash (25m → ground impact). Use `hold_mission_position()` instead.  
+**See:** [LOITER_MODE_CRASH_REPORT.md](LOITER_MODE_CRASH_REPORT.md)
+
 ## Features
 
 - 🤖 **AI-Powered Control**: Use natural language to command drones via GPT-4, Claude, or other LLMs
@@ -422,6 +429,7 @@ The MCP server exposes **36 tools** for complete drone control:
 **See [STATUS.md](STATUS.md) for complete tool list and descriptions.**
 
 ### Recent Updates
+- 🔴 **Nov 17, 2025**: v1.2.3 - **CRITICAL SAFETY FIX** - Deprecated `pause_mission()` due to crash risk (LOITER mode descent). Use `hold_mission_position()` instead.
 - ✅ **Nov 17, 2025**: v1.2.2 - Added `hold_mission_position` tool and enhanced mission diagnostics (pause without LOITER mode, better progress tracking)
 - ✅ **Nov 17, 2025**: Added automatic flight logging - all tool calls and MAVLink commands logged to timestamped files for debugging and auditing
 - ✅ **Nov 16, 2025**: v1.2.1 patch - improved error handling based on comprehensive testing (mission validation, orbit detection, battery fallback)

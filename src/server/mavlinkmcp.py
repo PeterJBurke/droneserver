@@ -935,37 +935,42 @@ async def get_health(ctx: Context) -> dict:
 @mcp.tool()
 async def pause_mission(ctx: Context) -> dict:
     """
-    Pause the currently executing mission.
-    The drone will hold its position. Use resume_mission to continue.
-    Waits for connection if not ready.
-
+    ⛔ DEPRECATED - DO NOT USE ⛔
+    
+    This tool has been deprecated due to CRITICAL SAFETY ISSUES:
+    - Entering LOITER mode causes ALTITUDE DESCENT
+    - LOITER does NOT hold current altitude
+    - This has caused CRASHES in testing
+    
+    ✅ USE hold_mission_position() INSTEAD ✅
+    
+    The hold_mission_position() tool:
+    - Stays in GUIDED mode (safe)
+    - Maintains current altitude (no descent)
+    - Holds position reliably
+    
+    This tool will be removed in a future version.
+    
     Args:
         ctx (Context): The context of the request.
 
     Returns:
-        dict: Status message with success or error.
+        dict: Error message directing to safe alternative.
     """
-    connector = ctx.request_context.lifespan_context
+    logger.error("⛔ pause_mission() called - THIS TOOL IS DEPRECATED AND UNSAFE!")
+    logger.error("⚠️  CRITICAL: pause_mission enters LOITER mode which DOES NOT hold altitude")
+    logger.error("⚠️  This has caused crashes! Use hold_mission_position() instead")
     
-    # Wait for connection
-    if not await ensure_connection(connector):
-        return {"status": "failed", "error": "Drone connection timeout. Please wait and try again."}
-    
-    drone = connector.drone
-    log_tool_call("pause_mission")
-    
-    try:
-        log_mavlink_cmd("drone.mission.pause_mission")
-        logger.info("⚠️  Pausing mission - drone may switch to LOITER mode")
-        await drone.mission.pause_mission()
-        return {
-            "status": "success", 
-            "message": "Mission paused - use resume_mission to continue",
-            "note": "Flight mode may have changed to LOITER (hold position)"
-        }
-    except Exception as e:
-        logger.error(f"Failed to pause mission: {e}")
-        return {"status": "failed", "error": f"Mission pause failed: {str(e)}"}
+    return {
+        "status": "failed",
+        "error": "⛔ pause_mission() is DEPRECATED due to safety issues",
+        "reason": "LOITER mode does NOT hold current altitude - causes descent and potential crashes",
+        "crash_report": "Flight testing showed altitude descent from 25m → 5m → GROUND IMPACT when using pause_mission",
+        "safe_alternative": "Use hold_mission_position() instead",
+        "why_safe": "hold_mission_position() stays in GUIDED mode and maintains altitude",
+        "how_to_use": "Call hold_mission_position() to pause, then set_current_waypoint() + resume_mission() to continue",
+        "migration_guide": "See MISSION_PAUSE_FIX.md for details"
+    }
 
 @mcp.tool()
 async def hold_mission_position(ctx: Context) -> dict:
