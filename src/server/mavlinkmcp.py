@@ -260,19 +260,19 @@ async def app_lifespan(server: FastMCP) -> AsyncIterator[MAVLinkConnector]:
     
     # Only log on first initialization to avoid spam
     if not _lifespan_initialized:
-    logger.info("=" * 60)
-    logger.info("🚀 LIFESPAN: Starting application lifespan...")
-    logger.info("=" * 60)
+        logger.info("=" * 60)
+        logger.info("🚀 LIFESPAN: Starting application lifespan...")
+        logger.info("=" * 60)
     
     try:
         # Get or create the global connector (only happens once)
         if not _lifespan_initialized:
-        logger.info("LIFESPAN: Calling get_or_create_global_connector()...")
+            logger.info("LIFESPAN: Calling get_or_create_global_connector()...")
         
         connector = await get_or_create_global_connector()
         
         if not _lifespan_initialized:
-        logger.info("LIFESPAN: Connector created successfully!")
+            logger.info("LIFESPAN: Connector created successfully!")
             _lifespan_initialized = True
         
         # Just yield the global connector - no teardown per request!
