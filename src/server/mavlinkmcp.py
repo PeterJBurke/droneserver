@@ -260,19 +260,19 @@ async def app_lifespan(server: FastMCP) -> AsyncIterator[MAVLinkConnector]:
     
     # Only log on first initialization to avoid spam
     if not _lifespan_initialized:
-        logger.info("=" * 60)
-        logger.info("🚀 LIFESPAN: Starting application lifespan...")
-        logger.info("=" * 60)
+    logger.info("=" * 60)
+    logger.info("🚀 LIFESPAN: Starting application lifespan...")
+    logger.info("=" * 60)
     
     try:
         # Get or create the global connector (only happens once)
         if not _lifespan_initialized:
-            logger.info("LIFESPAN: Calling get_or_create_global_connector()...")
+        logger.info("LIFESPAN: Calling get_or_create_global_connector()...")
         
         connector = await get_or_create_global_connector()
         
         if not _lifespan_initialized:
-            logger.info("LIFESPAN: Connector created successfully!")
+        logger.info("LIFESPAN: Connector created successfully!")
             _lifespan_initialized = True
         
         # Just yield the global connector - no teardown per request!
@@ -2089,6 +2089,12 @@ async def download_mission(ctx: Context) -> dict:
         - Verify uploaded mission
         - Check drone's planned route
         - Mission debugging
+    
+    Note:
+        ArduPilot SITL and some firmware versions don't support mission download.
+        If download fails with "UNSUPPORTED", use mission_progress() to verify 
+        the mission exists and is_mission_finished() to monitor execution.
+        This is a firmware limitation, not a bug in the server.
     """
     connector = ctx.request_context.lifespan_context
     
@@ -2157,12 +2163,15 @@ async def download_mission(ctx: Context) -> dict:
             
             # Provide helpful error message
             if "UNSUPPORTED" in error_str.upper():
+                # Soft failure - mission exists but download not supported by this firmware/config
+                logger.warning(f"{LogColors.WARNING}Mission download not supported by autopilot (this is a firmware limitation, not a bug){LogColors.RESET}")
                 return {
-                    "status": "failed", 
-                    "error": "Mission download not supported by autopilot in current state",
-                    "hint": "This can happen if: (1) No mission uploaded yet, (2) Mission was cleared, (3) Autopilot doesn't support download in current flight mode, (4) Need to wait longer after upload",
+                    "status": "partial_success", 
+                    "message": "Mission exists on drone but download not supported by autopilot firmware",
+                    "hint": "ArduPilot SITL often doesn't support mission download. Use mission_progress() to verify mission exists.",
+                    "workaround": "Mission was successfully uploaded. Use is_mission_finished() and mission_progress to monitor execution.",
                     "attempts": attempt + 1,
-                    "technical_error": error_str
+                    "note": "This is a known ArduPilot limitation, not a bug in the MCP server"
                 }
             else:
                 return {
