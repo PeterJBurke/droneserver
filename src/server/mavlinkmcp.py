@@ -968,6 +968,78 @@ async def pause_mission(ctx: Context) -> dict:
         return {"status": "failed", "error": f"Mission pause failed: {str(e)}"}
 
 @mcp.tool()
+async def hold_mission_position(ctx: Context) -> dict:
+    """
+    Alternative to pause_mission that holds position in GUIDED mode instead of LOITER.
+    This interrupts the current mission and switches to GUIDED mode to hold the current position.
+    Unlike pause_mission, this does NOT enter LOITER mode.
+    
+    NOTE: This stops the mission entirely. To continue the mission after using this,
+    you must use set_current_waypoint() to jump back to a waypoint and resume_mission(),
+    or upload/initiate a new mission.
+    
+    Use this when you want to:
+    - Pause flight without entering LOITER mode
+    - Maintain altitude stability (GUIDED mode)
+    - Temporarily interrupt a mission for manual control
+    
+    Waits for connection if not ready.
+
+    Args:
+        ctx (Context): The context of the request.
+
+    Returns:
+        dict: Status message with current position and waypoint info.
+    """
+    connector = ctx.request_context.lifespan_context
+    
+    # Wait for connection
+    if not await ensure_connection(connector):
+        return {"status": "failed", "error": "Drone connection timeout. Please wait and try again."}
+    
+    drone = connector.drone
+    log_tool_call("hold_mission_position")
+    
+    try:
+        # Get current mission progress before holding
+        current_wp = 0
+        total_wp = 0
+        async for mission_progress in drone.mission.mission_progress():
+            current_wp = mission_progress.current
+            total_wp = mission_progress.total
+            break
+        
+        # Get current position
+        async for position in drone.telemetry.position():
+            current_lat = position.latitude_deg
+            current_lon = position.longitude_deg
+            current_alt = position.absolute_altitude_m
+            break
+        
+        # Use hold_position to stay in GUIDED mode
+        # This will call goto_location with current position
+        log_mavlink_cmd(f"drone.action.goto_location(lat={current_lat}, lon={current_lon}, alt={current_alt})")
+        logger.info(f"⚠️  Holding mission position in GUIDED mode (not LOITER) - was at waypoint {current_wp}/{total_wp}")
+        await drone.action.goto_location(current_lat, current_lon, current_alt, float('nan'))
+        
+        return {
+            "status": "success",
+            "message": f"Holding position in GUIDED mode - mission interrupted at waypoint {current_wp}/{total_wp}",
+            "was_at_waypoint": current_wp,
+            "total_waypoints": total_wp,
+            "position": {
+                "latitude": current_lat,
+                "longitude": current_lon,
+                "altitude": current_alt
+            },
+            "flight_mode": "GUIDED",
+            "note": "Mission stopped. To continue: use set_current_waypoint() then resume_mission(), or start a new mission."
+        }
+    except Exception as e:
+        logger.error(f"Failed to hold mission position: {e}")
+        return {"status": "failed", "error": f"Hold mission position failed: {str(e)}"}
+
+@mcp.tool()
 async def resume_mission(ctx: Context) -> dict:
     """
     Resume a previously paused mission.
@@ -978,7 +1050,7 @@ async def resume_mission(ctx: Context) -> dict:
         ctx (Context): The context of the request.
 
     Returns:
-        dict: Status message with success or error.
+        dict: Status message with success or error including current waypoint.
     """
     connector = ctx.request_context.lifespan_context
     
@@ -990,13 +1062,38 @@ async def resume_mission(ctx: Context) -> dict:
     log_tool_call("resume_mission")
     
     try:
+        # Get current mission progress before resuming
+        current_wp = 0
+        total_wp = 0
+        async for mission_progress in drone.mission.mission_progress():
+            current_wp = mission_progress.current
+            total_wp = mission_progress.total
+            break
+        
         log_mavlink_cmd("drone.mission.start_mission")
-        logger.info("⚠️  Resuming mission - drone will switch to AUTO flight mode")
+        logger.info(f"⚠️  Resuming mission from waypoint {current_wp}/{total_wp} - drone will switch to AUTO flight mode")
         await drone.mission.start_mission()
+        
+        # Give the autopilot a moment to process the command
+        await asyncio.sleep(0.5)
+        
+        # Verify flight mode changed to AUTO
+        try:
+            flight_mode = await drone.telemetry.flight_mode().__anext__()
+            logger.info(f"Flight mode after resume: {flight_mode}")
+            mode_ok = "AUTO" in str(flight_mode) or "MISSION" in str(flight_mode)
+        except:
+            mode_ok = False
+            flight_mode = "UNKNOWN"
+        
         return {
             "status": "success", 
-            "message": "Mission resumed",
-            "note": "Flight mode automatically changed to AUTO for mission execution"
+            "message": f"Mission resumed from waypoint {current_wp}/{total_wp}",
+            "current_waypoint": current_wp,
+            "total_waypoints": total_wp,
+            "flight_mode": str(flight_mode),
+            "mode_transition_ok": mode_ok,
+            "note": "Flight mode should have changed to AUTO/MISSION for mission execution"
         }
     except Exception as e:
         logger.error(f"Failed to resume mission: {e}")
@@ -2147,16 +2244,35 @@ async def is_mission_finished(ctx: Context) -> dict:
     logger.info("Checking if mission is finished")
     
     try:
+        # Check mission finished status
         log_mavlink_cmd("drone.mission.is_mission_finished")
         finished = await drone.mission.is_mission_finished()
         
+        # Get current waypoint progress
+        current_wp = 0
+        total_wp = 0
+        async for mission_progress in drone.mission.mission_progress():
+            current_wp = mission_progress.current
+            total_wp = mission_progress.total
+            break
+        
+        # Get current flight mode
+        try:
+            flight_mode = await drone.telemetry.flight_mode().__anext__()
+        except:
+            flight_mode = "UNKNOWN"
+        
         status_text = "FINISHED" if finished else "IN PROGRESS"
-        logger.info(f"Mission status: {status_text}")
+        logger.info(f"Mission status: {status_text} - Waypoint {current_wp}/{total_wp} - Mode: {flight_mode}")
         
         return {
             "status": "success",
             "mission_finished": finished,
-            "status_text": status_text
+            "status_text": status_text,
+            "current_waypoint": current_wp,
+            "total_waypoints": total_wp,
+            "flight_mode": str(flight_mode),
+            "progress_percentage": round((current_wp / total_wp * 100) if total_wp > 0 else 0, 1)
         }
     except Exception as e:
         logger.error(f"Check mission finished failed: {e}")

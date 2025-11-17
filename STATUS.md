@@ -6,13 +6,13 @@
 The MAVLink MCP Server is **production-ready** with complete flight operations, safety features, parameter management, advanced navigation, and mission enhancements.
 
 **Last Updated:** November 17, 2025  
-**Version:** 1.2.1+ (with hold_position fix)  
-**Total Tools:** 35 MCP tools (+10 from v1.1.0)  
+**Version:** 1.2.2 (with mission improvements)  
+**Total Tools:** 36 MCP tools (+11 from v1.1.0)  
 **Tested With:** ArduPilot, ChatGPT Developer Mode
 
 ---
 
-## 🎯 Available Tools (35 Total)
+## 🎯 Available Tools (36 Total)
 
 ### Basic Flight Control (5 tools)
 - ✅ `arm_drone` - Arm motors for flight
@@ -36,16 +36,17 @@ The MAVLink MCP Server is **production-ready** with complete flight operations, 
 - ✅ `set_yaw` - **NEW** Set heading without moving
 - ✅ `reposition` - **NEW** Move to location and loiter
 
-### Mission Management (9 tools)
+### Mission Management (10 tools)
 - ✅ `initiate_mission` - Upload and start waypoint missions
 - ✅ `print_mission_progress` - Mission status monitoring
-- ✅ `pause_mission` - Pause current mission
-- ✅ `resume_mission` - Resume paused mission
+- ✅ `pause_mission` - Pause current mission (enters LOITER mode)
+- ✅ `hold_mission_position` - **NEW** Hold position in GUIDED mode (avoids LOITER)
+- ✅ `resume_mission` - Resume paused mission (with diagnostics)
 - ✅ `clear_mission` - Remove all waypoints
 - ✅ `upload_mission` - **NEW** Upload mission without starting
 - ✅ `download_mission` - **NEW** Retrieve mission from drone
 - ✅ `set_current_waypoint` - **NEW** Jump to specific waypoint
-- ✅ `is_mission_finished` - **NEW** Check mission completion
+- ✅ `is_mission_finished` - **NEW** Check mission completion (with progress)
 
 ### Telemetry & Monitoring (7 tools)
 - ✅ `get_flight_mode` - Current flight mode
@@ -252,6 +253,14 @@ The MAVLink MCP Server is **production-ready** with complete flight operations, 
 ---
 
 ## 🔧 Recent Changes
+
+### November 17, 2025 - v1.2.2: Mission Control Improvements ✅
+**Added:** `hold_mission_position` tool and enhanced mission diagnostics
+- **New Tool:** `hold_mission_position` - Alternative to `pause_mission` that stays in GUIDED mode (avoids LOITER)
+- **Improved:** `resume_mission` now shows current waypoint, flight mode, and mode transition status
+- **Improved:** `is_mission_finished` now includes waypoint progress, flight mode, and completion percentage
+- **Benefit:** Better mission pause/resume control without unwanted flight mode changes
+- **Use Case:** Pause mission for inspection without altitude drift from LOITER mode
 
 ### November 17, 2025 - Fixed `hold_position` Altitude Descent ✅
 **Fixed:** `hold_position` now stays in GUIDED mode instead of switching to LOITER
