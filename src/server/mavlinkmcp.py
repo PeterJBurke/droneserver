@@ -34,25 +34,21 @@ logger.addHandler(console_handler)
 # Prevent propagation to avoid duplicate logs from parent loggers
 logger.propagate = False
 
-# Custom logging filter to colorize HTTP requests
-class HTTPColorFilter(logging.Filter):
-    """Add color to HTTP request logs (GET/POST)"""
-    def filter(self, record):
-        # Color the entire message in magenta for HTTP requests
-        if hasattr(record, 'msg'):
-            # Will be imported later when LogColors is defined
-            record.msg = f"\033[35m🌐 HTTP → {record.msg}\033[0m"
-        return True
+# Suppress noisy HTTP access logs (not useful for drone operations)
+# Set to WARNING to only show errors, not every GET/POST request
+uvicorn_access_logger = logging.getLogger("uvicorn.access")
+uvicorn_access_logger.setLevel(logging.WARNING)  # Suppress INFO-level HTTP logs
 
-# Configure Uvicorn/HTTP logger for colored output
-uvicorn_logger = logging.getLogger("uvicorn.access")
-uvicorn_logger.handlers.clear()
-uvicorn_handler = logging.StreamHandler()
-uvicorn_formatter = logging.Formatter('%(asctime)s | %(levelname)-7s | %(message)s', datefmt='%H:%M:%S')
-uvicorn_handler.setFormatter(uvicorn_formatter)
-uvicorn_handler.addFilter(HTTPColorFilter())
-uvicorn_logger.addHandler(uvicorn_handler)
-uvicorn_logger.propagate = False
+# Also suppress FastMCP's "Processing request" logs (server.py)
+# These are internal framework logs that clutter the output
+fastmcp_logger = logging.getLogger("mcp.server")
+fastmcp_logger.setLevel(logging.WARNING)  # Only show warnings/errors
+
+# If you need to see HTTP logs for debugging, set MAVLINK_VERBOSE=1 in .env
+if os.getenv("MAVLINK_VERBOSE", "0") == "1":
+    uvicorn_access_logger.setLevel(logging.INFO)
+    fastmcp_logger.setLevel(logging.INFO)
+    logger.info("🔍 VERBOSE MODE: Showing all HTTP and framework logs")
 
 # Ensure output is unbuffered for systemd journalctl
 import sys
