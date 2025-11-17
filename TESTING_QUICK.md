@@ -35,8 +35,8 @@ Quick inspection test:
 6. Orbit around lat 33.6459, lon -117.8427 at 15 meter radius, 2 m/s, clockwise, staying at your current altitude
 7. After 20 seconds, stop and reposition to lat 33.6460, lon -117.8428, climb to 20m relative altitude
 8. Check battery level
-9. Create and upload (don't start) a 3-waypoint mission going north, east, then back
-10. Download the mission to verify
+9. IMPORTANT: Use upload_mission (NOT initiate_mission) to create a 3-waypoint mission going north, east, then back (don't start it)
+10. Download the mission using download_mission to verify it was uploaded correctly
 11. Check if any mission is currently running (should be false)
 12. Return to launch and land
 13. Disarm

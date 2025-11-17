@@ -49,6 +49,12 @@ Choose the test that fits your needs:
 - Firmware compatibility matrix
 - Safety notes
 - Test results template
+
+### 🔧 [Upload/Download Mission Diagnostic](TESTING_UPLOAD_DOWNLOAD.md)
+**Best for:** Verifying mission upload/download fix
+- Quick 5-step test (no flight required)
+- Verifies vehicle_action fix is deployed
+- Troubleshooting guide for common issues
 - Customization guide
 
 ---
