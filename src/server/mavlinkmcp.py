@@ -146,6 +146,32 @@ def log_mavlink_cmd(command: str, **kwargs):
         logger.info(f"{LogColors.MAVLINK}📡 MAVLink → {msg}{LogColors.RESET}")
         get_flight_logger().log_entry("MAVLink_CMD", msg)
 
+def haversine_distance(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
+    """
+    Calculate the distance between two GPS coordinates using the Haversine formula.
+    
+    Args:
+        lat1, lon1: First point (latitude, longitude in degrees)
+        lat2, lon2: Second point (latitude, longitude in degrees)
+        
+    Returns:
+        Distance in meters
+    """
+    R = 6371000  # Earth's radius in meters
+    
+    # Convert to radians
+    phi1 = math.radians(lat1)
+    phi2 = math.radians(lat2)
+    delta_phi = math.radians(lat2 - lat1)
+    delta_lambda = math.radians(lon2 - lon1)
+    
+    # Haversine formula
+    a = math.sin(delta_phi / 2) ** 2 + \
+        math.cos(phi1) * math.cos(phi2) * math.sin(delta_lambda / 2) ** 2
+    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+    
+    return R * c
+
 @dataclass
 class MAVLinkConnector:
     drone: System
@@ -1269,6 +1295,107 @@ async def go_to_location(ctx: Context, latitude_deg: float, longitude_deg: float
     except Exception as e:
         logger.error(f"Go to location failed: {e}{LogColors.RESET}")
         return {"status": "failed", "error": f"Navigation failed: {str(e)}"}
+
+@mcp.tool()
+async def wait_for_arrival(
+    ctx: Context,
+    latitude_deg: float,
+    longitude_deg: float,
+    threshold_m: float = 5.0,
+    timeout_s: float = 300.0
+) -> dict:
+    """
+    Wait until the drone arrives at a target GPS location.
+    
+    IMPORTANT: Call this AFTER go_to_location or reposition commands,
+    and BEFORE issuing the next command (like land).
+    
+    This tool will block and poll the drone's position until it is within
+    the threshold distance of the target, or until timeout.
+
+    Args:
+        ctx (Context): The context of the request.
+        latitude_deg (float): Target latitude in degrees (-90 to +90).
+        longitude_deg (float): Target longitude in degrees (-180 to +180).
+        threshold_m (float): Distance threshold in meters to consider "arrived" (default: 5.0m).
+        timeout_s (float): Maximum time to wait in seconds (default: 300s / 5 minutes).
+
+    Returns:
+        dict: Status with arrival confirmation, final distance, and time waited.
+    """
+    log_tool_call("wait_for_arrival", latitude_deg=latitude_deg, longitude_deg=longitude_deg, 
+                  threshold_m=threshold_m, timeout_s=timeout_s)
+    connector = ctx.request_context.lifespan_context
+    
+    # Wait for connection
+    if not await ensure_connection(connector):
+        return {"status": "failed", "error": "Drone connection timeout. Please wait and try again."}
+    
+    # Validate coordinates
+    if not (-90 <= latitude_deg <= 90):
+        return {"status": "failed", "error": f"Invalid latitude: {latitude_deg}. Must be between -90 and 90."}
+    if not (-180 <= longitude_deg <= 180):
+        return {"status": "failed", "error": f"Invalid longitude: {longitude_deg}. Must be between -180 and 180."}
+    
+    drone = connector.drone
+    poll_interval = 2.0  # seconds between position checks
+    start_time = asyncio.get_event_loop().time()
+    
+    logger.info(f"⏳ Waiting for arrival at ({latitude_deg:.6f}, {longitude_deg:.6f}) within {threshold_m}m (timeout: {timeout_s}s)")
+    get_flight_logger().log_entry("WAIT_START", f"Target: ({latitude_deg:.6f}, {longitude_deg:.6f}), threshold: {threshold_m}m")
+    
+    try:
+        while True:
+            # Check timeout
+            elapsed = asyncio.get_event_loop().time() - start_time
+            if elapsed >= timeout_s:
+                logger.warning(f"⏰ Wait timeout after {elapsed:.1f}s")
+                result = {
+                    "status": "timeout",
+                    "message": f"Timeout after {elapsed:.1f} seconds. Drone did not reach target within {threshold_m}m.",
+                    "elapsed_seconds": round(elapsed, 1),
+                    "target": {"latitude": latitude_deg, "longitude": longitude_deg}
+                }
+                log_tool_output(result)
+                return result
+            
+            # Get current position
+            async for position in drone.telemetry.position():
+                current_lat = position.latitude_deg
+                current_lon = position.longitude_deg
+                current_alt = position.relative_altitude_m
+                break
+            
+            # Calculate distance to target
+            distance = haversine_distance(current_lat, current_lon, latitude_deg, longitude_deg)
+            
+            logger.info(f"📍 Position: ({current_lat:.6f}, {current_lon:.6f}) | Distance to target: {distance:.1f}m | Elapsed: {elapsed:.1f}s")
+            
+            # Check if arrived
+            if distance <= threshold_m:
+                logger.info(f"{LogColors.SUCCESS}✅ ARRIVED at target! Distance: {distance:.1f}m (threshold: {threshold_m}m){LogColors.RESET}")
+                get_flight_logger().log_entry("ARRIVED", f"Distance: {distance:.1f}m, Time: {elapsed:.1f}s")
+                
+                result = {
+                    "status": "success",
+                    "message": f"Arrived at target location",
+                    "final_distance_m": round(distance, 1),
+                    "elapsed_seconds": round(elapsed, 1),
+                    "final_position": {
+                        "latitude": current_lat,
+                        "longitude": current_lon,
+                        "altitude_m": current_alt
+                    }
+                }
+                log_tool_output(result)
+                return result
+            
+            # Wait before next check
+            await asyncio.sleep(poll_interval)
+            
+    except Exception as e:
+        logger.error(f"{LogColors.ERROR}❌ Wait for arrival failed: {e}{LogColors.RESET}")
+        return {"status": "failed", "error": f"Wait failed: {str(e)}"}
 
 @mcp.tool()
 async def get_home_position(ctx: Context) -> dict:
