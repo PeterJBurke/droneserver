@@ -1400,39 +1400,32 @@ async def go_to_location(ctx: Context, latitude_deg: float, longitude_deg: float
         return {"status": "failed", "error": f"Navigation failed: {str(e)}"}
 
 @mcp.tool()
-async def wait_for_arrival(
+async def check_arrival(
     ctx: Context,
     latitude_deg: float,
     longitude_deg: float,
-    threshold_m: float = 5.0,
-    timeout_s: float = 60.0
+    threshold_m: float = 10.0
 ) -> dict:
     """
-    Wait until the drone arrives at a target GPS location.
+    Check if the drone has arrived at a target GPS location (instant, non-blocking).
     
-    IMPORTANT: Call this AFTER go_to_location or reposition commands,
-    and BEFORE issuing the next command (like land).
+    IMPORTANT: Call this AFTER go_to_location or reposition commands.
+    This returns immediately with current distance - it does NOT wait.
     
-    This tool will block and poll the drone's position until it is within
-    the threshold distance of the target, or until timeout.
-    
-    NOTE: Default timeout is 60 seconds to prevent connection timeouts.
-    For longer flights, call this tool multiple times - if status is "in_progress",
-    call again with the same coordinates until status is "success".
+    If status is "in_progress", call this again after a few seconds.
+    If status is "arrived", the drone is within threshold of target - safe to land.
 
     Args:
         ctx (Context): The context of the request.
         latitude_deg (float): Target latitude in degrees (-90 to +90).
         longitude_deg (float): Target longitude in degrees (-180 to +180).
-        threshold_m (float): Distance threshold in meters to consider "arrived" (default: 5.0m).
-        timeout_s (float): Maximum time to wait per call in seconds (default: 60s).
+        threshold_m (float): Distance threshold in meters to consider "arrived" (default: 10.0m).
 
     Returns:
-        dict: Status with arrival confirmation, current distance, and time waited.
-              Status will be "success" (arrived), "in_progress" (still flying), or "failed".
+        dict: Status with "arrived" (within threshold) or "in_progress" (still flying).
     """
-    log_tool_call("wait_for_arrival", latitude_deg=latitude_deg, longitude_deg=longitude_deg, 
-                  threshold_m=threshold_m, timeout_s=timeout_s)
+    log_tool_call("check_arrival", latitude_deg=latitude_deg, longitude_deg=longitude_deg, 
+                  threshold_m=threshold_m)
     connector = ctx.request_context.lifespan_context
     
     # Wait for connection
@@ -1446,79 +1439,56 @@ async def wait_for_arrival(
         return {"status": "failed", "error": f"Invalid longitude: {longitude_deg}. Must be between -180 and 180."}
     
     drone = connector.drone
-    poll_interval = 2.0  # seconds between position checks
-    start_time = asyncio.get_event_loop().time()
-    last_distance = None
-    
-    logger.info(f"⏳ Waiting for arrival at ({latitude_deg:.6f}, {longitude_deg:.6f}) within {threshold_m}m (timeout: {timeout_s}s)")
-    get_flight_logger().log_entry("WAIT_START", f"Target: ({latitude_deg:.6f}, {longitude_deg:.6f}), threshold: {threshold_m}m")
     
     try:
-        while True:
-            # Check timeout
-            elapsed = asyncio.get_event_loop().time() - start_time
+        # Get current position (instant - no waiting)
+        async for position in drone.telemetry.position():
+            current_lat = position.latitude_deg
+            current_lon = position.longitude_deg
+            current_alt = position.relative_altitude_m
+            break
+        
+        # Calculate distance to target
+        distance = haversine_distance(current_lat, current_lon, latitude_deg, longitude_deg)
+        
+        logger.info(f"📍 Distance to target: {distance:.1f}m (threshold: {threshold_m}m)")
+        
+        # Check if arrived
+        if distance <= threshold_m:
+            logger.info(f"{LogColors.SUCCESS}✅ ARRIVED at target! Distance: {distance:.1f}m{LogColors.RESET}")
+            get_flight_logger().log_entry("ARRIVED", f"Distance: {distance:.1f}m")
             
-            # Get current position
-            async for position in drone.telemetry.position():
-                current_lat = position.latitude_deg
-                current_lon = position.longitude_deg
-                current_alt = position.relative_altitude_m
-                break
-            
-            # Calculate distance to target
-            distance = haversine_distance(current_lat, current_lon, latitude_deg, longitude_deg)
-            
-            # Track if we're making progress (for timeout message)
-            making_progress = last_distance is None or distance < last_distance - 1.0
-            last_distance = distance
-            
-            logger.info(f"📍 Position: ({current_lat:.6f}, {current_lon:.6f}) | Distance to target: {distance:.1f}m | Elapsed: {elapsed:.1f}s")
-            
-            # Check if arrived
-            if distance <= threshold_m:
-                logger.info(f"{LogColors.SUCCESS}✅ ARRIVED at target! Distance: {distance:.1f}m (threshold: {threshold_m}m){LogColors.RESET}")
-                get_flight_logger().log_entry("ARRIVED", f"Distance: {distance:.1f}m, Time: {elapsed:.1f}s")
-                
-                result = {
-                    "status": "success",
-                    "message": f"Arrived at target location",
-                    "final_distance_m": round(distance, 1),
-                    "elapsed_seconds": round(elapsed, 1),
-                    "final_position": {
-                        "latitude": current_lat,
-                        "longitude": current_lon,
-                        "altitude_m": current_alt
-                    }
-                }
-                log_tool_output(result)
-                return result
-            
-            # Check timeout - return "in_progress" instead of failing
-            if elapsed >= timeout_s:
-                logger.info(f"⏳ Still {distance:.1f}m from target after {elapsed:.1f}s - returning progress")
-                result = {
-                    "status": "in_progress",
-                    "message": f"Still flying to target. Distance remaining: {distance:.1f}m. Call wait_for_arrival again to continue waiting.",
-                    "current_distance_m": round(distance, 1),
-                    "elapsed_seconds": round(elapsed, 1),
-                    "making_progress": making_progress,
-                    "current_position": {
-                        "latitude": current_lat,
-                        "longitude": current_lon,
-                        "altitude_m": current_alt
-                    },
-                    "target": {"latitude": latitude_deg, "longitude": longitude_deg},
-                    "hint": "Call wait_for_arrival again with the same coordinates to continue waiting."
-                }
-                log_tool_output(result)
-                return result
-            
-            # Wait before next check
-            await asyncio.sleep(poll_interval)
+            result = {
+                "status": "arrived",
+                "message": f"Drone has arrived at target location! Distance: {distance:.1f}m",
+                "distance_m": round(distance, 1),
+                "current_position": {
+                    "latitude": current_lat,
+                    "longitude": current_lon,
+                    "altitude_m": current_alt
+                },
+                "target": {"latitude": latitude_deg, "longitude": longitude_deg}
+            }
+            log_tool_output(result)
+            return result
+        else:
+            result = {
+                "status": "in_progress",
+                "message": f"Still {distance:.1f}m from target. Call check_arrival again in a few seconds.",
+                "distance_m": round(distance, 1),
+                "current_position": {
+                    "latitude": current_lat,
+                    "longitude": current_lon,
+                    "altitude_m": current_alt
+                },
+                "target": {"latitude": latitude_deg, "longitude": longitude_deg}
+            }
+            log_tool_output(result)
+            return result
             
     except Exception as e:
-        logger.error(f"{LogColors.ERROR}❌ Wait for arrival failed: {e}{LogColors.RESET}")
-        return {"status": "failed", "error": f"Wait failed: {str(e)}"}
+        logger.error(f"{LogColors.ERROR}❌ Check arrival failed: {e}{LogColors.RESET}")
+        return {"status": "failed", "error": f"Check failed: {str(e)}"}
 
 @mcp.tool()
 async def get_home_position(ctx: Context) -> dict:
