@@ -241,7 +241,7 @@ MAVLink MCP works with all major autopilots, but some advanced features require 
 
 **🔍 Check Your Firmware:**
 - Use `get_telemetry` or `get_health` tools to check autopilot version
-- See [TESTING_GUIDE.md](TESTING_GUIDE.md) for firmware-specific limitations and workarounds
+- See [TESTING.md](TESTING.md) for firmware-specific limitations and workarounds
 
 ## Quick Start
 
@@ -445,12 +445,8 @@ Start agent with auto-configuration:
 - **[Color-Coded Logs Guide](LOG_COLORS.md)** 🎨 - Understanding color-coded journalctl logs
 
 ### Testing & Examples
-- **[Testing Guide](TESTING_GUIDE.md)** - Main testing overview with 5 focused test suites:
-  - [Quick Test (5 min)](TESTING_QUICK.md) - Fast setup verification
-  - [Comprehensive Test (20 min)](TESTING_COMPREHENSIVE.md) - Full system validation
-  - [Granular Test (45 min)](TESTING_GRANULAR.md) - Deep verification with ACK/NACK logic
-  - [Individual Tests](TESTING_INDIVIDUAL.md) - Feature-specific debugging tests
-  - [Testing Reference](TESTING_REFERENCE.md) - Troubleshooting & firmware compatibility
+- **[Testing Guide](TESTING.md)** - Manual testing procedures using ChatGPT prompts (automated tests not implemented yet)
+- **[Testing Reference](TESTING_REFERENCE.md)** - Troubleshooting & firmware compatibility
 - **[Examples README](examples/README.md)** - Example agent documentation
 
 ### Project Information

@@ -346,7 +346,7 @@ sudo systemctl restart mavlinkmcp
 ## See Also
 
 - [FLIGHT_MODES.md](FLIGHT_MODES.md) - Comprehensive guide to flight modes
-- [TESTING_GUIDE.md](TESTING_GUIDE.md) - Test scenarios for all features
+- [TESTING.md](TESTING.md) - Test scenarios for all features
 - [FLIGHT_LOGS.md](FLIGHT_LOGS.md) - How to read and analyze flight logs
 - [STATUS.md](STATUS.md) - Complete feature list and roadmap
 

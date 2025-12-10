@@ -197,7 +197,7 @@ ls -t flight_*.log | tail -n +11 | xargs rm --
 
 ## Integration with Testing
 
-Flight logs are automatically created during testing. After running the test scenarios from `TESTING_GUIDE.md`, you can review the logs to verify:
+Flight logs are automatically created during testing. After running the test scenarios from `TESTING.md`, you can review the logs to verify:
 
 1. **All expected commands were sent**
 2. **Commands were sent in the correct order**

@@ -475,11 +475,7 @@ Expected execution times:
 - [LOITER_MODE_CRASH_REPORT.md](LOITER_MODE_CRASH_REPORT.md) - Critical safety analysis (v1.2.3)
 
 ### Testing Guides
-- [TESTING_GUIDE.md](TESTING_GUIDE.md) - Main testing overview
-- [TESTING_QUICK.md](TESTING_QUICK.md) - 5-minute quick test
-- [TESTING_COMPREHENSIVE.md](TESTING_COMPREHENSIVE.md) - 20-minute full test
-- [TESTING_GRANULAR.md](TESTING_GRANULAR.md) - 45-minute detailed verification
-- [TESTING_INDIVIDUAL.md](TESTING_INDIVIDUAL.md) - Feature-specific tests
+- [TESTING.md](TESTING.md) - Main testing guide (consolidated manual testing procedures)
 - [TESTING_FIXES.md](TESTING_FIXES.md) - Detailed fixes from real-world testing
 
 ### Examples
@@ -635,5 +631,5 @@ See [MISSION_PAUSE_FIX.md](MISSION_PAUSE_FIX.md) for migration guide and [LOITER
 
 ---
 
-[← Back to Testing Guide](TESTING_GUIDE.md)
+[← Back to Testing Guide](TESTING.md)
 

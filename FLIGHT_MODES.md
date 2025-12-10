@@ -226,7 +226,7 @@ RTL (returning home)
 ## 🔗 Related Documentation
 
 - [STATUS.md](STATUS.md) - Current features and tools
-- [TESTING_GUIDE.md](TESTING_GUIDE.md) - Test scenarios
+- [TESTING.md](TESTING.md) - Test scenarios
 - [ArduPilot Flight Modes](https://ardupilot.org/copter/docs/flight-modes.html) - Official docs
 
 ---
