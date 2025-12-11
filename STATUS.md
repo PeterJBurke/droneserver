@@ -12,19 +12,19 @@ During flight testing, `pause_mission()` caused a **drone crash** by descending 
 
 ---
 
-## ✅ Current Status (v1.2.4 - Logging & Cleanup)
+## ✅ Current Status (v1.3.0 - Enhanced Telemetry)
 
-### Production Ready with Enhanced Logging
-The MAVLink MCP Server is **production-ready** with complete flight operations, safety features, parameter management, and advanced navigation. **v1.2.4 adds JSON logging and improves code clarity.**
+### Production Ready with Enhanced Telemetry
+The MAVLink MCP Server is **production-ready** with complete flight operations, safety features, parameter management, advanced navigation, and enhanced telemetry. **v1.3.0 adds 5 new telemetry tools for better monitoring.**
 
-**Last Updated:** November 17, 2025  
-**Version:** 1.2.4 (with JSON logging & cleanup)  
-**Total Tools:** 35 MCP tools (1 deprecated for safety)  
+**Last Updated:** December 10, 2025  
+**Version:** 1.3.0 (Enhanced Telemetry)  
+**Total Tools:** 40 MCP tools (1 deprecated for safety)  
 **Tested With:** ArduPilot, ChatGPT Developer Mode
 
 ---
 
-## 🎯 Available Tools (35 Total)
+## 🎯 Available Tools (40 Total)
 
 ### Basic Flight Control (5 tools)
 - ✅ `arm_drone` - Arm motors for flight
@@ -59,14 +59,19 @@ The MAVLink MCP Server is **production-ready** with complete flight operations, 
 - ✅ `set_current_waypoint` - **NEW** Jump to specific waypoint
 - ✅ `is_mission_finished` - **NEW** Check mission completion (with progress)
 
-### Telemetry & Monitoring (7 tools)
+### Telemetry & Monitoring (14 tools)
 - ✅ `get_flight_mode` - Current flight mode
-- ✅ `get_health` - Pre-flight system checks
+- ✅ `get_health` - Pre-flight system checks (detailed)
+- ✅ `get_health_all_ok` - **NEW** Quick go/no-go health check
 - ✅ `get_speed` - Ground speed & velocity
 - ✅ `get_attitude` - Roll, pitch, yaw
+- ✅ `get_heading` - **NEW** Compass heading in degrees
 - ✅ `get_gps_info` - Satellite count & GPS quality
 - ✅ `get_in_air` - Airborne status detection
+- ✅ `get_landed_state` - **NEW** Detailed state (on ground/taking off/in air/landing)
 - ✅ `get_armed` - Motor armed status
+- ✅ `get_rc_status` - **NEW** RC controller connection & signal strength
+- ✅ `get_odometry` - **NEW** Combined position, velocity, orientation
 - ✅ `print_status_text` - Status message streaming
 - ✅ `get_imu` - IMU sensor data (accel, gyro, mag)
 
