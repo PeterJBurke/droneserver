@@ -60,18 +60,19 @@ ChatGPT: "Landing... 10m... 5m... 1m... Landed successfully!"
 
 ### 📋 Recommended Prompt for Navigation
 
-Copy this prompt template for safe, monitored flights with real-time updates:
+Copy this prompt template for monitored flights with progress updates:
 
 ```
 Arm the drone, takeoff to [ALTITUDE] meters, and fly to [DESTINATION].
 
-After calling go_to_location:
-1. Call monitor_flight() every 5 seconds
-2. ALWAYS show me the DISPLAY_TO_USER field from each response
-3. When arrived, call land()
-4. Keep calling monitor_flight() and showing updates until mission_complete is true
+After go_to_location, do the following in a loop:
+1. Call monitor_flight()
+2. Print the DISPLAY_TO_USER value from the response to me
+3. If mission_complete is false, repeat from step 1
+4. If status is "arrived", call land() first, then continue the loop
 
-Show me every update. Do not stop until the drone has landed.
+You MUST print the DISPLAY_TO_USER text to me after EACH monitor_flight call.
+Do not batch the calls - show me each update as you get it.
 ```
 
 **Example with a real destination:**
@@ -79,9 +80,12 @@ Show me every update. Do not stop until the drone has landed.
 Arm the drone, takeoff to 50 meters, and fly to the UCI athletic fields
 at coordinates (33.6420, -117.8269).
 
-Call monitor_flight() every 5 seconds and show me each DISPLAY_TO_USER update.
-Keep showing updates until the drone has landed and mission is complete.
+After go_to_location, call monitor_flight() in a loop.
+Print the DISPLAY_TO_USER value to me after each call.
+When status is "arrived", call land() and continue monitoring until landed.
 ```
+
+**Why this prompt format?** ChatGPT batches tool calls by default. The explicit "print to me" instruction forces it to output each update as conversation text so you see real-time progress.
 
 ### What the User Will See
 
