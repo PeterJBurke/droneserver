@@ -1555,7 +1555,8 @@ async def go_to_location(ctx: Context, latitude_deg: float, longitude_deg: float
                 "altitude_agl": round(relative_alt, 1),
                 "yaw": yaw_deg if not math.isnan(yaw_deg) else "maintain current"
             },
-            "next_step": "NOW: Call monitor_flight(), PRINT its DISPLAY_TO_USER to user, repeat until landed"
+            "WARNING": "DRONE IS NOW FLYING - YOU MUST MONITOR IT",
+            "next_step": "Call monitor_flight() in a LOOP until mission_complete is true. Print DISPLAY_TO_USER each time."
         }
         log_tool_output(result)
         return result
@@ -1659,16 +1660,19 @@ async def check_arrival(
 @mcp.tool()
 async def monitor_flight(ctx: Context, wait_seconds: float = 5.0, arrival_threshold_m: float = 10.0, auto_land: bool = True) -> dict:
     """
-    Monitor flight progress. PRINT the DISPLAY_TO_USER value to user after EACH call.
+    Monitor flight progress. YOU MUST CALL THIS IN A LOOP UNTIL mission_complete IS TRUE.
     
-    SIMPLE LOOP - just keep calling until mission_complete is true:
-    1. Call monitor_flight()
-    2. PRINT the DISPLAY_TO_USER value to the user
-    3. If mission_complete is false: GO BACK TO STEP 1
-    4. If mission_complete is true: STOP - drone has landed safely
+    ⚠️ CRITICAL: If mission_complete is false, you MUST call monitor_flight() again!
+    Stopping early leaves the drone flying unattended - DANGEROUS!
     
-    With auto_land=True (default), landing is triggered automatically when arrived.
-    You just need to keep calling monitor_flight() until mission_complete is true.
+    REQUIRED LOOP:
+    while True:
+        result = monitor_flight()
+        print(result["DISPLAY_TO_USER"])  # Show user the progress
+        if result["mission_complete"]:
+            break  # Only stop when mission_complete is true
+    
+    Landing is automatic when the drone arrives (auto_land=True by default).
 
     Args:
         ctx (Context): The context of the request.
@@ -1677,7 +1681,7 @@ async def monitor_flight(ctx: Context, wait_seconds: float = 5.0, arrival_thresh
         auto_land (bool): Automatically land when arrived (default: True).
 
     Returns:
-        dict: DISPLAY_TO_USER (print this!), status, mission_complete.
+        dict: DISPLAY_TO_USER (print this!), status, mission_complete (ONLY stop when true).
     """
     log_tool_call("monitor_flight", wait_seconds=wait_seconds, arrival_threshold_m=arrival_threshold_m, auto_land=auto_land)
     connector = ctx.request_context.lifespan_context
@@ -1862,7 +1866,9 @@ async def monitor_flight(ctx: Context, wait_seconds: float = 5.0, arrival_thresh
             "ground_speed_m_s": round(ground_speed, 1),
             "progress_percent": round(progress, 0),
             "eta_seconds": round(eta_seconds, 0) if eta_seconds else None,
-            "action_required": "SHOW DISPLAY_TO_USER to user, then CALL monitor_flight() AGAIN",
+            "WARNING": "DRONE STILL FLYING - DO NOT STOP",
+            "action_required": "1) PRINT DISPLAY_TO_USER to user 2) CALL monitor_flight() IMMEDIATELY",
+            "must_call_next": "monitor_flight()",
             "mission_complete": False
         }
         log_tool_output(result)
