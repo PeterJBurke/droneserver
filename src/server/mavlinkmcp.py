@@ -1666,7 +1666,7 @@ async def check_arrival(
 
 
 @mcp.tool()
-async def monitor_flight(ctx: Context, wait_seconds: float = 15.0, arrival_threshold_m: float = 20.0, auto_land: bool = True) -> dict:
+async def monitor_flight(ctx: Context, wait_seconds: float = 5.0, arrival_threshold_m: float = 20.0, auto_land: bool = True) -> dict:
     """
     Monitor flight progress. YOU MUST CALL THIS IN A LOOP UNTIL mission_complete IS TRUE.
     
@@ -1884,12 +1884,10 @@ async def monitor_flight(ctx: Context, wait_seconds: float = 15.0, arrival_thres
             eta_str = "calculating..."
         
         result = {
-            "DISPLAY_TO_USER": f"🚁 {progress:.0f}% | {distance:.0f}m to go | ETA {eta_str} | Alt {current_alt:.1f}m | {ground_speed:.1f}m/s ⚠️ CALL MONITOR_FLIGHT AGAIN",
+            "DISPLAY_TO_USER": f"🚁 FLYING | Dist: {distance:.0f}m | Alt: {current_alt:.1f}m | Speed: {ground_speed:.1f}m/s | ETA: {eta_str} | {progress:.0f}%",
             "status": "in_progress",
             "distance_m": round(distance, 1),
             "progress_percent": round(progress, 0),
-            "eta_seconds": round(eta_seconds, 0) if eta_seconds else None,
-            "CRITICAL": "DRONE IN FLIGHT - CALL monitor_flight() NOW OR DRONE WILL BE ABANDONED",
             "mission_complete": False
         }
         log_tool_output(result)
