@@ -3,8 +3,8 @@
 Complete reference showing which MCP tools are direct equivalents to MAVSDK methods and which are custom implementations.
 
 **Last Updated:** December 2024  
-**MAVLink MCP Version:** 1.2.4  
-**Total Tools:** 35
+**MAVLink MCP Version:** 1.3.0  
+**Total Tools:** 40
 
 ---
 
@@ -15,10 +15,10 @@ Complete reference showing which MCP tools are direct equivalents to MAVSDK meth
 | **Flight Control** | 3 | 2 |
 | **Navigation** | 2 | 5 |
 | **Mission Management** | 5 | 5 |
-| **Telemetry** | 9 | 0 |
+| **Telemetry** | 14 | 0 |
 | **Parameter Management** | 3 | 0 |
 | **Safety** | 1 | 1 |
-| **TOTAL** | **23** | **13** |
+| **TOTAL** | **28** | **13** |
 
 ---
 
@@ -65,6 +65,11 @@ Complete reference showing which MCP tools are direct equivalents to MAVSDK meth
 | `get_armed` | ✅ Yes | `drone.telemetry.armed()` |
 | `print_status_text` | ✅ Yes | `drone.telemetry.status_text()` |
 | `get_imu` | ✅ Yes | `drone.telemetry.imu()` |
+| `get_health_all_ok` | ✅ Yes | `drone.telemetry.health_all_ok()` |
+| `get_landed_state` | ✅ Yes | `drone.telemetry.landed_state()` |
+| `get_rc_status` | ✅ Yes | `drone.telemetry.rc_status()` |
+| `get_heading` | ✅ Yes | `drone.telemetry.heading()` |
+| `get_odometry` | ✅ Yes | `drone.telemetry.odometry()` |
 | **Parameter Management** |
 | `get_parameter` | ⚠️ Partial | `drone.param.get_param_int()` or `get_param_float()` with auto-type detection |
 | `set_parameter` | ⚠️ Partial | `drone.param.set_param_int()` or `set_param_float()` with auto-type detection |

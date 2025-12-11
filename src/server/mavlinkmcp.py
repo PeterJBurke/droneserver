@@ -2539,6 +2539,355 @@ async def is_mission_finished(ctx: Context) -> dict:
         return {"status": "failed", "error": f"Mission status check failed: {str(e)}"}
 
 
+# ============================================================================
+# ENHANCED TELEMETRY TOOLS
+# ============================================================================
+
+@mcp.tool()
+async def get_health_all_ok(ctx: Context) -> dict:
+    """
+    Quick health check - returns True if ALL systems are OK for flight.
+    This is a simplified check that returns a single boolean rather than
+    detailed health status per subsystem.
+    
+    Use this for quick pre-flight go/no-go decisions.
+    For detailed health breakdown, use get_health() instead.
+
+    Args:
+        ctx (Context): The context of the request.
+
+    Returns:
+        dict: Boolean indicating if all systems pass health checks.
+    """
+    log_tool_call("get_health_all_ok")
+    connector = ctx.request_context.lifespan_context
+    
+    # Wait for connection
+    if not await ensure_connection(connector):
+        return {"status": "failed", "error": "Drone connection timeout. Please wait and try again."}
+    
+    drone = connector.drone
+    logger.info("Checking if all systems are healthy")
+    
+    try:
+        async for health_all_ok in drone.telemetry.health_all_ok():
+            status_text = "ALL SYSTEMS GO ✓" if health_all_ok else "SYSTEMS NOT READY ✗"
+            logger.info(f"{LogColors.STATUS}Health check: {status_text}{LogColors.RESET}")
+            
+            result = {
+                "status": "success",
+                "health_all_ok": health_all_ok,
+                "status_text": status_text,
+                "recommendation": "Ready for flight" if health_all_ok else "Run get_health() for details on what's not ready"
+            }
+            log_tool_output(result)
+            return result
+    except Exception as e:
+        logger.error(f"{LogColors.ERROR}❌ TOOL ERROR - Failed to check health_all_ok: {e}{LogColors.RESET}")
+        return {"status": "failed", "error": f"Health check failed: {str(e)}"}
+
+
+@mcp.tool()
+async def get_landed_state(ctx: Context) -> dict:
+    """
+    Get detailed landed state of the drone.
+    Returns one of: ON_GROUND, TAKING_OFF, IN_AIR, LANDING, or UNKNOWN.
+    
+    More detailed than get_in_air() which only tells you if drone is airborne.
+    This tells you the transition states (taking off, landing) as well.
+
+    Args:
+        ctx (Context): The context of the request.
+
+    Returns:
+        dict: Landed state enum value and descriptive text.
+    """
+    log_tool_call("get_landed_state")
+    connector = ctx.request_context.lifespan_context
+    
+    # Wait for connection
+    if not await ensure_connection(connector):
+        return {"status": "failed", "error": "Drone connection timeout. Please wait and try again."}
+    
+    drone = connector.drone
+    logger.info("Checking landed state")
+    
+    try:
+        async for landed_state in drone.telemetry.landed_state():
+            state_str = str(landed_state)
+            
+            # Map enum to human-readable description
+            state_descriptions = {
+                "UNKNOWN": "State cannot be determined",
+                "ON_GROUND": "Drone is on the ground, not moving",
+                "IN_AIR": "Drone is flying/airborne",
+                "TAKING_OFF": "Drone is in the process of taking off",
+                "LANDING": "Drone is in the process of landing"
+            }
+            
+            # Extract enum name from string representation
+            state_name = state_str.split(".")[-1] if "." in state_str else state_str
+            description = state_descriptions.get(state_name, state_str)
+            
+            logger.info(f"{LogColors.STATUS}Landed state: {state_name} - {description}{LogColors.RESET}")
+            
+            result = {
+                "status": "success",
+                "landed_state": state_name,
+                "description": description,
+                "is_on_ground": state_name == "ON_GROUND",
+                "is_in_air": state_name == "IN_AIR",
+                "is_transitioning": state_name in ["TAKING_OFF", "LANDING"]
+            }
+            log_tool_output(result)
+            return result
+    except Exception as e:
+        logger.error(f"{LogColors.ERROR}❌ TOOL ERROR - Failed to get landed state: {e}{LogColors.RESET}")
+        return {"status": "failed", "error": f"Landed state read failed: {str(e)}"}
+
+
+@mcp.tool()
+async def get_rc_status(ctx: Context) -> dict:
+    """
+    Get RC (Remote Control) controller connection status and signal strength.
+    Shows whether an RC transmitter is connected and the signal quality.
+    
+    Useful for monitoring RC link health during manual/assisted flight.
+
+    Args:
+        ctx (Context): The context of the request.
+
+    Returns:
+        dict: RC availability status and signal strength percentage.
+    """
+    log_tool_call("get_rc_status")
+    connector = ctx.request_context.lifespan_context
+    
+    # Wait for connection
+    if not await ensure_connection(connector):
+        return {"status": "failed", "error": "Drone connection timeout. Please wait and try again."}
+    
+    drone = connector.drone
+    logger.info("Checking RC controller status")
+    
+    try:
+        async for rc_status in drone.telemetry.rc_status():
+            is_available = rc_status.is_available
+            signal_strength = rc_status.signal_strength_percent
+            
+            # Determine signal quality
+            if not is_available:
+                quality = "NO RC CONNECTED"
+            elif signal_strength >= 80:
+                quality = "Excellent"
+            elif signal_strength >= 60:
+                quality = "Good"
+            elif signal_strength >= 40:
+                quality = "Fair"
+            elif signal_strength >= 20:
+                quality = "Poor"
+            else:
+                quality = "Critical - Link may be lost"
+            
+            status_text = f"RC {'Available' if is_available else 'Not Available'} - Signal: {signal_strength:.0f}% ({quality})"
+            logger.info(f"{LogColors.STATUS}RC Status: {status_text}{LogColors.RESET}")
+            
+            result = {
+                "status": "success",
+                "rc_available": is_available,
+                "signal_strength_percent": round(signal_strength, 1) if is_available else 0,
+                "signal_quality": quality,
+                "status_text": status_text
+            }
+            log_tool_output(result)
+            return result
+    except Exception as e:
+        logger.error(f"{LogColors.ERROR}❌ TOOL ERROR - Failed to get RC status: {e}{LogColors.RESET}")
+        return {"status": "failed", "error": f"RC status read failed: {str(e)}"}
+
+
+@mcp.tool()
+async def get_heading(ctx: Context) -> dict:
+    """
+    Get the current compass heading of the drone in degrees.
+    Returns heading from 0 to 360 degrees where:
+    - 0° = North
+    - 90° = East  
+    - 180° = South
+    - 270° = West
+
+    Args:
+        ctx (Context): The context of the request.
+
+    Returns:
+        dict: Heading in degrees and cardinal direction.
+    """
+    log_tool_call("get_heading")
+    connector = ctx.request_context.lifespan_context
+    
+    # Wait for connection
+    if not await ensure_connection(connector):
+        return {"status": "failed", "error": "Drone connection timeout. Please wait and try again."}
+    
+    drone = connector.drone
+    logger.info("Getting compass heading")
+    
+    try:
+        async for heading in drone.telemetry.heading():
+            heading_deg = heading.heading_deg
+            
+            # Normalize heading to 0-360
+            heading_normalized = heading_deg % 360
+            if heading_normalized < 0:
+                heading_normalized += 360
+            
+            # Determine cardinal direction
+            if heading_normalized >= 337.5 or heading_normalized < 22.5:
+                cardinal = "N"
+                direction = "North"
+            elif heading_normalized < 67.5:
+                cardinal = "NE"
+                direction = "Northeast"
+            elif heading_normalized < 112.5:
+                cardinal = "E"
+                direction = "East"
+            elif heading_normalized < 157.5:
+                cardinal = "SE"
+                direction = "Southeast"
+            elif heading_normalized < 202.5:
+                cardinal = "S"
+                direction = "South"
+            elif heading_normalized < 247.5:
+                cardinal = "SW"
+                direction = "Southwest"
+            elif heading_normalized < 292.5:
+                cardinal = "W"
+                direction = "West"
+            else:
+                cardinal = "NW"
+                direction = "Northwest"
+            
+            logger.info(f"{LogColors.STATUS}Heading: {heading_normalized:.1f}° ({direction}){LogColors.RESET}")
+            
+            result = {
+                "status": "success",
+                "heading_deg": round(heading_normalized, 1),
+                "cardinal_direction": cardinal,
+                "direction_name": direction
+            }
+            log_tool_output(result)
+            return result
+    except Exception as e:
+        logger.error(f"{LogColors.ERROR}❌ TOOL ERROR - Failed to get heading: {e}{LogColors.RESET}")
+        return {"status": "failed", "error": f"Heading read failed: {str(e)}"}
+
+
+@mcp.tool()
+async def get_odometry(ctx: Context) -> dict:
+    """
+    Get combined odometry data: position, velocity, and orientation.
+    Returns all motion-related telemetry in a single call.
+    
+    This is more efficient than calling get_position, get_velocity, 
+    and get_attitude separately when you need all three.
+    
+    Position is in NED (North-East-Down) frame relative to home.
+    Velocity is in body frame (forward, right, down).
+    Orientation is given as quaternion and can be converted to Euler angles.
+
+    Args:
+        ctx (Context): The context of the request.
+
+    Returns:
+        dict: Combined position, velocity, and orientation data.
+    """
+    log_tool_call("get_odometry")
+    connector = ctx.request_context.lifespan_context
+    
+    # Wait for connection
+    if not await ensure_connection(connector):
+        return {"status": "failed", "error": "Drone connection timeout. Please wait and try again."}
+    
+    drone = connector.drone
+    logger.info("Getting odometry data")
+    
+    try:
+        async for odometry in drone.telemetry.odometry():
+            # Extract position (NED frame)
+            position = {
+                "north_m": round(odometry.position_body.x_m, 3),
+                "east_m": round(odometry.position_body.y_m, 3),
+                "down_m": round(odometry.position_body.z_m, 3),
+            }
+            
+            # Extract velocity (body frame)
+            velocity = {
+                "forward_m_s": round(odometry.velocity_body.x_m_s, 3),
+                "right_m_s": round(odometry.velocity_body.y_m_s, 3),
+                "down_m_s": round(odometry.velocity_body.z_m_s, 3),
+            }
+            
+            # Extract orientation quaternion
+            quaternion = {
+                "w": round(odometry.q.w, 4),
+                "x": round(odometry.q.x, 4),
+                "y": round(odometry.q.y, 4),
+                "z": round(odometry.q.z, 4),
+            }
+            
+            # Convert quaternion to Euler angles for easier interpretation
+            # Using standard aerospace convention (roll, pitch, yaw)
+            w, x, y, z = odometry.q.w, odometry.q.x, odometry.q.y, odometry.q.z
+            
+            # Roll (rotation around x-axis)
+            sinr_cosp = 2 * (w * x + y * z)
+            cosr_cosp = 1 - 2 * (x * x + y * y)
+            roll_rad = math.atan2(sinr_cosp, cosr_cosp)
+            
+            # Pitch (rotation around y-axis)
+            sinp = 2 * (w * y - z * x)
+            if abs(sinp) >= 1:
+                pitch_rad = math.copysign(math.pi / 2, sinp)  # Use 90 degrees if out of range
+            else:
+                pitch_rad = math.asin(sinp)
+            
+            # Yaw (rotation around z-axis)
+            siny_cosp = 2 * (w * z + x * y)
+            cosy_cosp = 1 - 2 * (y * y + z * z)
+            yaw_rad = math.atan2(siny_cosp, cosy_cosp)
+            
+            euler_angles = {
+                "roll_deg": round(math.degrees(roll_rad), 2),
+                "pitch_deg": round(math.degrees(pitch_rad), 2),
+                "yaw_deg": round(math.degrees(yaw_rad), 2),
+            }
+            
+            # Calculate derived values
+            ground_speed = math.sqrt(velocity["forward_m_s"]**2 + velocity["right_m_s"]**2)
+            total_speed = math.sqrt(ground_speed**2 + velocity["down_m_s"]**2)
+            
+            logger.info(f"{LogColors.STATUS}Odometry: Pos({position['north_m']:.1f}N, {position['east_m']:.1f}E, {-position['down_m']:.1f}Up) "
+                       f"Vel({ground_speed:.1f}m/s ground) Yaw({euler_angles['yaw_deg']:.0f}°){LogColors.RESET}")
+            
+            result = {
+                "status": "success",
+                "frame_id": str(odometry.frame_id),
+                "child_frame_id": str(odometry.child_frame_id),
+                "position_ned_m": position,
+                "velocity_body_m_s": velocity,
+                "orientation_quaternion": quaternion,
+                "euler_angles_deg": euler_angles,
+                "ground_speed_m_s": round(ground_speed, 2),
+                "total_speed_m_s": round(total_speed, 2),
+                "altitude_m": round(-position["down_m"], 2)  # Convert down to up (altitude)
+            }
+            log_tool_output(result)
+            return result
+    except Exception as e:
+        logger.error(f"{LogColors.ERROR}❌ TOOL ERROR - Failed to get odometry: {e}{LogColors.RESET}")
+        return {"status": "failed", "error": f"Odometry read failed: {str(e)}"}
+
+
 if __name__ == "__main__":
     # Run the server
     mcp.run(transport='stdio')

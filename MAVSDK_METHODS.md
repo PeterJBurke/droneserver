@@ -80,10 +80,10 @@ Complete reference of all MAVSDK Python methods and their implementation status 
 | `in_air()` | ✅ | `get_in_air` | Is drone flying? |
 | `armed()` | ✅ | `get_armed` | Are motors armed? |
 | `status_text()` | ✅ | `print_status_text` | Status messages stream |
-| `health_all_ok()` | ❌ | - | All health checks passed? |
-| `landed_state()` | ❌ | - | On ground / taking off / in air / landing |
-| `rc_status()` | ❌ | - | RC controller status & signal |
-| `heading()` | ❌ | - | Compass heading (degrees) |
+| `health_all_ok()` | ✅ | `get_health_all_ok` | All health checks passed? |
+| `landed_state()` | ✅ | `get_landed_state` | On ground / taking off / in air / landing |
+| `rc_status()` | ✅ | `get_rc_status` | RC controller status & signal |
+| `heading()` | ✅ | `get_heading` | Compass heading (degrees) |
 | `attitude_quaternion()` | ❌ | - | Attitude as quaternion |
 | `attitude_angular_velocity_body()` | ❌ | - | Angular velocity (body frame) |
 | `ground_speed_ned()` | ❌ | - | Ground speed (NED frame) |
@@ -91,7 +91,7 @@ Complete reference of all MAVSDK Python methods and their implementation status 
 | `imu()` | ❌ | - | Raw IMU data (accel, gyro) |
 | `scaled_imu()` | ❌ | - | Scaled IMU readings |
 | `raw_imu()` | ❌ | - | Unprocessed IMU data |
-| `odometry()` | ❌ | - | Position + velocity + orientation |
+| `odometry()` | ✅ | `get_odometry` | Position + velocity + orientation |
 | `distance_sensor()` | ❌ | - | Rangefinder/lidar distance |
 | `scaled_pressure()` | ❌ | - | Barometer pressure |
 | `actuator_control_target()` | ❌ | - | Commanded actuator values |
@@ -330,13 +330,15 @@ Complete reference of all MAVSDK Python methods and their implementation status 
 
 ### High Priority (Commonly Needed)
 
-1. `get_landed_state()` - Know if drone is on ground, taking off, flying, or landing
-2. `get_rc_status()` - Important safety check (is RC connected?)
-3. `get_heading()` - Simple compass heading
-4. `get_flight_information()` - Flight time since arm
-5. `get_version()` - Know what firmware you're talking to
-6. `get_takeoff_altitude()` / `get_maximum_speed()` - Read settings you can already set
-7. `set_return_to_launch_altitude()` / `get_return_to_launch_altitude()` - RTL safety
+1. ✅ `get_landed_state()` - Know if drone is on ground, taking off, flying, or landing
+2. ✅ `get_rc_status()` - Important safety check (is RC connected?)
+3. ✅ `get_heading()` - Simple compass heading
+4. ✅ `get_health_all_ok()` - Quick go/no-go health check
+5. ✅ `get_odometry()` - Combined position, velocity, and orientation
+6. `get_flight_information()` - Flight time since arm
+7. `get_version()` - Know what firmware you're talking to
+8. `get_takeoff_altitude()` / `get_maximum_speed()` - Read settings you can already set
+9. `set_return_to_launch_altitude()` / `get_return_to_launch_altitude()` - RTL safety
 
 ### Medium Priority (Camera/Gimbal - Requires Hardware)
 

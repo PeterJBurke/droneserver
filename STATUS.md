@@ -159,11 +159,11 @@ The MAVLink MCP Server is **production-ready** with complete flight operations, 
 **Focus:** Complete telemetry coverage and monitoring tools
 
 #### Enhanced Telemetry Tools
-- [ ] `get_health_all_ok` - Quick health check (all systems OK?)
-- [ ] `get_landed_state` - Detailed landed state (on ground / taking off / in air / landing)
-- [ ] `get_rc_status` - RC controller connection status and signal strength
-- [ ] `get_heading` - Compass heading in degrees
-- [ ] `get_odometry` - Combined position, velocity, and orientation data
+- ✅ `get_health_all_ok` - Quick health check (all systems OK?)
+- ✅ `get_landed_state` - Detailed landed state (on ground / taking off / in air / landing)
+- ✅ `get_rc_status` - RC controller connection status and signal strength
+- ✅ `get_heading` - Compass heading in degrees
+- ✅ `get_odometry` - Combined position, velocity, and orientation data
 
 #### Mission Tools (Already Implemented)
 - ✅ `start_mission` - Available via `initiate_mission` and `resume_mission`
@@ -418,8 +418,8 @@ We welcome contributions! Priority areas:
 
 ---
 
-**Current Version:** v1.2.4 (35 tools - Production Ready)  
-**Status:** ✅ Production Ready + Full Feature Set  
-**Next Release:** v1.3.0 (Telemetry & Monitoring Enhancements)  
+**Current Version:** v1.3.0 (40 tools - Production Ready)  
+**Status:** ✅ Production Ready + Enhanced Telemetry  
+**Next Release:** v2.0.0 (Intelligent Automation)  
 **Maintainer:** Peter J Burke  
 **Original Author:** Ion Gabriel
