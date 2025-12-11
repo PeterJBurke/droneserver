@@ -1471,23 +1471,25 @@ async def clear_mission(ctx: Context) -> dict:
 async def go_to_location(ctx: Context, latitude_deg: float, longitude_deg: float, 
                         absolute_altitude_m: float, yaw_deg: float = float('nan')) -> dict:
     """
-    Fly to an absolute GPS location with specified altitude.
-    This is direct waypoint navigation to specific coordinates.
-    Returns immediately after starting navigation.
+    Fly to an absolute GPS location. Returns immediately - drone flies autonomously.
     
-    IMPORTANT: This function returns immediately! The drone will fly autonomously.
-    Use monitor_flight() to track progress, or just call land() when ready - 
-    the landing gate will prevent landing if not at destination.
+    AFTER CALLING THIS, YOU MUST:
+    1. Call monitor_flight() repeatedly
+    2. PRINT the DISPLAY_TO_USER value to the user after each monitor_flight() call
+    3. When status is "arrived", call land()
+    4. Continue calling monitor_flight() until mission_complete is true
+    
+    This gives the user real-time updates on flight progress (distance, speed, ETA).
 
     Args:
         ctx (Context): The context of the request.
         latitude_deg (float): Target latitude in degrees (-90 to +90).
         longitude_deg (float): Target longitude in degrees (-180 to +180).
-        absolute_altitude_m (float): Target altitude in meters above sea level (MSL).
-        yaw_deg (float): Target yaw/heading in degrees (optional, default: maintain current heading).
+        absolute_altitude_m (float): Target altitude in meters MSL.
+        yaw_deg (float): Target heading in degrees (optional).
 
     Returns:
-        dict: Navigation started confirmation with distance and instructions.
+        dict: Navigation started. Next: call monitor_flight() and show updates to user.
     """
     log_tool_call("go_to_location", latitude_deg=latitude_deg, longitude_deg=longitude_deg, 
                   absolute_altitude_m=absolute_altitude_m)
@@ -1553,7 +1555,7 @@ async def go_to_location(ctx: Context, latitude_deg: float, longitude_deg: float
                 "altitude_agl": round(relative_alt, 1),
                 "yaw": yaw_deg if not math.isnan(yaw_deg) else "maintain current"
             },
-            "next_step": "Call monitor_flight() to track progress, or land() when ready (landing gate will prevent unsafe landing)"
+            "next_step": "NOW: Call monitor_flight(), PRINT its DISPLAY_TO_USER to user, repeat until landed"
         }
         log_tool_output(result)
         return result
@@ -1657,29 +1659,29 @@ async def check_arrival(
 @mcp.tool()
 async def monitor_flight(ctx: Context, wait_seconds: float = 5.0, arrival_threshold_m: float = 10.0) -> dict:
     """
-    Monitor flight progress and provide real-time updates to show the user.
+    Monitor flight progress. IMMEDIATELY PRINT the DISPLAY_TO_USER value to the user after each call.
     
-    *** IMPORTANT: DISPLAY THE "DISPLAY_TO_USER" FIELD TO THE USER! ***
+    REQUIRED BEHAVIOR:
+    1. Call this function
+    2. PRINT/SAY the "DISPLAY_TO_USER" value to the user (do not skip this!)
+    3. Check if mission_complete is true - if not, repeat from step 1
+    4. If status is "arrived", call land() then continue monitoring
     
-    This function returns a "DISPLAY_TO_USER" string that MUST be shown to the user.
-    It contains formatted flight data: distance, altitude, speed, ETA.
+    The DISPLAY_TO_USER field contains a formatted status line like:
+    "🚁 FLYING | Dist: 500m | Alt: 50m | Speed: 10m/s | ETA: 49s | 80%"
     
-    Call this function repeatedly (every 5 seconds) and ALWAYS show the 
-    DISPLAY_TO_USER content to keep the user informed of flight progress.
+    You MUST print this to the user after EACH call so they see real-time progress.
+    Do NOT batch calls without showing output. Show each update immediately.
     
-    Status flow:
-    - "in_progress" → Show update to user, CALL AGAIN in 5 seconds
-    - "arrived" → Show to user, CALL land() NOW, then monitor_flight() again
-    - "landing" → Show to user, CALL AGAIN to confirm touchdown
-    - "landed" → Show to user, mission complete!
+    Continue calling until mission_complete is true (drone has landed).
 
     Args:
         ctx (Context): The context of the request.
-        wait_seconds (float): How long to wait before returning update (default: 5 seconds).
-        arrival_threshold_m (float): Distance to consider "arrived" (default: 10.0m).
+        wait_seconds (float): Seconds to wait before returning (default: 5).
+        arrival_threshold_m (float): Distance to consider "arrived" (default: 10m).
 
     Returns:
-        dict: Contains "DISPLAY_TO_USER" string to show the user, plus flight data.
+        dict: DISPLAY_TO_USER (print this!), status, action_required, mission_complete.
     """
     log_tool_call("monitor_flight", wait_seconds=wait_seconds, arrival_threshold_m=arrival_threshold_m)
     connector = ctx.request_context.lifespan_context
