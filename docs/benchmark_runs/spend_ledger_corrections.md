@@ -141,7 +141,9 @@ provider is known to report them separately (xAI — proven by those rows, and a
 provider does not vary this per request), or `reasoning > output` on that turn
 (arithmetically disjoint). **Residual, disclosed:** an aggregator turn whose
 upstream excludes reasoning but happens to report fewer reasoning than output
-tokens is still priced low. Total exposure across the whole ledger to date is
-bounded at about **$1.42** (Plan 12) — xAI ≈ $0.10, OpenRouter ≈ $1.32.
+tokens is still priced low. Total exposure across the whole ledger is
+bounded at about **$3.04** — xAI ≈ $0.09, OpenRouter ≈ $2.94 (recomputed
+2026-09-04 over all 1,980 distinct rows; the $1.42 quoted here before that date
+was the same computation restricted to rows written before 2026-08-10).
 Historical rows are not corrected for it, for the same reason as above: the
 inclusion flag was never recorded, so any per-row figure would be invented.
