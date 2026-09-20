@@ -10,7 +10,7 @@ export DRONESERVER_API_KEY=$(grep "^SAFETY_API_KEYS=" /etc/droneserver/staging.e
 export DRONESERVER_RECORDER_API_KEY=$(cat /root/llmuav-recorder.key)
 
 echo "###### PROBE A: rejected key (anthropic) ######"
-ANTHROPIC_API_KEY="sk-ant-invalid-key-for-classification-probe" \
+ANTHROPIC_API_KEY="deliberately-invalid-key-for-rejection-probe" \
   timeout 600 .venv/bin/python -u scripts/run_llm_missions.py \
     --missions T1 --trials 1 --model claude-haiku-4-5-20251001 \
     --url http://127.0.0.1:8090/sse --label probe_badkey \
